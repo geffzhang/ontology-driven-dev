@@ -1,952 +1,1644 @@
 # MU UI 模型元文件 - mu-ui-model.yaml
-# 依据《合同管理需求规格说明书-V9.md》附录 D + 附录 C.7
+# 依据《合同管理需求规格说明书-V9.md》附录 C.7（v9.1 重写为 AI 原生交互模型）
 model_type: UI
-version: "1.0"
+version: "2.0"
 domain: "销售合同执行管理"
 
 application:
   name: 销售合同执行管理系统
-  menus:
-    - menuId: menu-contract
-      name: 合同管理
-      children:
-        - menuId: menu-contract-maintain
-          name: 合同维护
-          screenRef: frmContractMaintain
-        - menuId: menu-contract-query
-          name: 合同查询
-          screenRef: frmContractQuery
-    - menuId: menu-invoice
-      name: 开票管理
-      children:
-        - menuId: menu-invoice-maintain
-          name: 开票录入
-          screenRef: frmInvoiceMaintain
-        - menuId: menu-invoice-query
-          name: 开票查询
-          screenRef: frmInvoiceQuery
-    - menuId: menu-receipt
-      name: 收款管理
-      children:
-        - menuId: menu-receipt-maintain
-          name: 收款录入
-          screenRef: frmReceiptMaintain
-        - menuId: menu-receipt-query
-          name: 收款查询
-          screenRef: frmReceiptQuery
-    - menuId: menu-approval
-      name: 审批中心
-      children:
-        - menuId: menu-approval-contract
-          name: 合同审批
-          screenRef: frmContractApproval
-        - menuId: menu-approval-invoice
-          name: 开票审批
-          screenRef: frmInvoiceApproval
-    - menuId: menu-report
-      name: 报表中心
-      children:
-        - menuId: menu-report-execution
-          name: 合同执行情况分析
-          screenRef: frmContractExecutionReport
-        - menuId: menu-report-dept
-          name: 部门合同统计分析
-          screenRef: frmDeptReport
-        - menuId: menu-report-unreceived
-          name: 已开票未收款分析
-          screenRef: frmUnreceivedReport
-    - menuId: menu-masterdata
-      name: 基础数据
-      children:
-        - menuId: menu-masterdata-product
-          name: 产品信息维护
-          screenRef: frmProductMaintain
-        - menuId: menu-masterdata-customer
-          name: 客户信息维护
-          screenRef: frmCustomerMaintain
-        - menuId: menu-masterdata-department
-          name: 部门信息维护
-          screenRef: frmDepartmentMaintain
-        - menuId: menu-masterdata-employee
-          name: 人员信息维护
-          screenRef: frmEmployeeMaintain
+  uiProtocols:
+    a2ui:    { version: "v0.9", catalogRef: "ontology-basic/v1" }
+    mcpApps: { version: "SEP-1865" }
 
-screens:
-  # ══════════════════════════════════════════════════════════
-  # 合同维护（主从表，带审批双按钮）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmContractMaintain
-    name: 合同维护
-    screenType: MASTER_DETAIL_FORM
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 合同录入（主从表）                                            │
-      │ 合同编号:[txtContractNo]  合同名称:[txtContractName]  合同类型:(cboContractType) │
-      │ 所属产品:[pslProduct]     所属客户:[pslCustomer]      签订时间:{dtpSignDate}     │
-      │ 所属部门:[pslDepartment]  责任人:[pslOwner]           合同税率:[txtTaxRate]      │
-      │ 合同总金额:[txtTotalAmount] 采购金额:[txtPurchaseAmount] 备注:[txtaRemark]       │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 付款阶段（从表，表格内动态维护）                              │
-      │ @grdPaymentStage                                              │
-      │  阶段编号 | 阶段名称 | 付款比例 | 阶段应付金额 | 开票状态       │
-      │  [btnAddRow]                                                  │
-      ├──────────────────────────────────────────────────────────────┤
-      │ [btnSaveDraft 保存草稿] [btnSubmit 提交] [btnCancel 取消]      │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtContractNo
-        type: TEXTBOX
-        label: 合同编号
-        io: I
-        required: true
-        dataBinding: Contract.contractNo
-      - id: txtContractName
-        type: TEXTBOX
-        label: 合同名称
-        io: I
-        required: true
-        dataBinding: Contract.contractName
-      - id: cboContractType
-        type: COMBO
-        label: 合同类型
-        io: I
-        required: true
-        dataBinding: Contract.contractType
-      - id: pslProduct
-        type: POPUP_SELECT
-        label: 所属产品
-        io: I
-        required: true
-        dataBinding: Contract.productId
-      - id: pslCustomer
-        type: POPUP_SELECT
-        label: 所属客户
-        io: I
-        required: true
-        dataBinding: Contract.customerId
-      - id: pslDepartment
-        type: POPUP_SELECT
-        label: 所属部门
-        io: I
-        required: true
-        dataBinding: Contract.departmentId
-      - id: pslOwner
-        type: POPUP_SELECT
-        label: 责任人
-        io: I
-        required: true
-        dataBinding: Contract.ownerId
-      - id: dtpSignDate
-        type: DATEPICKER
-        label: 签订时间
-        io: I
-        required: true
-        dataBinding: Contract.signDate
-      - id: txtTaxRate
-        type: TEXTBOX
-        label: 合同税率
-        io: I
-        required: true
-        dataBinding: Contract.taxRate
-      - id: txtTotalAmount
-        type: NUMBER
-        label: 合同总金额
-        io: I
-        required: true
-        dataBinding: Contract.totalAmount
-      - id: txtPurchaseAmount
-        type: NUMBER
-        label: 采购金额
-        io: I
-        required: true
-        dataBinding: Contract.purchaseAmount
-      - id: txtaRemark
-        type: TEXTAREA
-        label: 备注
-        io: I
-      - id: grdPaymentStage
-        type: GRID
-        label: 付款阶段
-        io: I_O
-        dataBinding: Contract.stages
-      - id: btnAddRow
-        type: BUTTON
-        label: 新增行
-      - id: btnLogout
-        type: BUTTON
-        label: 退出
+# ──────────────────────────────────────────────────────────────────────
+# 能力目录：一个用户意图一条，扁平无层级（取代旧菜单树）
+# ──────────────────────────────────────────────────────────────────────
+capabilities:
+  # 合同维护 / 审批 / 查询
+  - capabilityId: cap-contract-create
+    name: 录入销售合同
+    intent: 创建一份销售合同，保存草稿或提交进入审批流
+    utterances:
+      - "新建一个销售合同"
+      - "帮我录入东方公司的合同"
+      - "起草一份新合同"
+    uiUnitRef: ui-contract-maintain
+    permissionRef: [PERM-CONTRACT-CREATE]
 
+  - capabilityId: cap-contract-resubmit
+    name: 修改并重新提交合同
+    intent: 对被驳回的合同进行修改后重新提交审批
+    utterances:
+      - "重新提交这份合同"
+      - "把驳回的合同改一下再提交"
+    toolRef: contract_resubmit
+    permissionRef: [PERM-CONTRACT-CREATE]
+
+  - capabilityId: cap-contract-void-archive
+    name: 作废或归档合同
+    intent: 对已结束或异常终止的合同执行作废或归档
+    utterances:
+      - "把这份合同作废"
+      - "归档一下合同 HT-2026-001"
+    toolRef: contract_void_or_archive
+    permissionRef: [PERM-CONTRACT-CREATE]
+
+  - capabilityId: cap-contract-query
+    name: 查询合同列表
+    intent: 按合同编号、名称、类型、签订日期等条件查询合同
+    utterances:
+      - "查一下销售合同"
+      - "看看有哪些合同"
+    uiUnitRef: ui-contract-query
+    permissionRef: [PERM-CONTRACT-QUERY-LIST, PERM-CONTRACT-QUERY-LIST-OWN-DEPT]
+
+  - capabilityId: cap-contract-approve
+    name: 审批合同
+    intent: 审批待办的合同；含财务审批与总经理二级审批
+    utterances:
+      - "审批一下待办的合同"
+      - "通过 HT-2026-001"
+    uiUnitRef: ui-contract-approval
+    permissionRef: [PERM-CONTRACT-APPROVE-FINANCE]
+
+  - capabilityId: cap-contract-approve-gm
+    name: 总经理审批合同
+    intent: 对超过财务审批阈值的合同进行总经理二级审批
+    utterances:
+      - "总经理审批这份大额合同"
+      - "走总经理审批"
+    toolRef: contract_approve_general_manager
+    permissionRef: [PERM-CONTRACT-APPROVE-GM]
+
+  # 开票
+  - capabilityId: cap-invoice-create
+    name: 录入开票
+    intent: 为合同录入开票，保存草稿或提交进入审批流
+    utterances:
+      - "给 HT-2026-001 开一张票"
+      - "新建一张开票"
+    uiUnitRef: ui-invoice-maintain
+    permissionRef: [PERM-INVOICE-SAVE-DRAFT]
+
+  - capabilityId: cap-invoice-resubmit
+    name: 修改并重新提交开票
+    intent: 对被驳回的开票进行修改后重新提交审批
+    utterances:
+      - "重新提交这张开票"
+    toolRef: invoice_resubmit
+    permissionRef: [PERM-INVOICE-SUBMIT]
+
+  - capabilityId: cap-invoice-void
+    name: 作废开票
+    intent: 对错误或异常的开票执行作废
+    utterances:
+      - "把开票 INV-2026-001 作废"
+    toolRef: invoice_void
+    permissionRef: [PERM-INVOICE-SUBMIT]
+
+  - capabilityId: cap-invoice-query
+    name: 查询开票
+    intent: 按开票编号、合同、开票状态、开票日期等条件查询开票
+    utterances:
+      - "查一下开票记录"
+      - "有哪些开票"
+    uiUnitRef: ui-invoice-query
+    permissionRef: [PERM-CONTRACT-QUERY-UNRECEIVED, PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT]
+
+  - capabilityId: cap-invoice-approve
+    name: 审批开票
+    intent: 审批待办的开票
+    utterances:
+      - "审批一下开票"
+      - "通过 INV-2026-001"
+    uiUnitRef: ui-invoice-approval
+    permissionRef: [PERM-INVOICE-APPROVE]
+
+  # 收款
+  - capabilityId: cap-receipt-create
+    name: 录入收款
+    intent: 为某张开票录入收款记录
+    utterances:
+      - "登记一笔收款"
+      - "给 INV-2026-001 录一笔收款"
+    uiUnitRef: ui-receipt-maintain
+    permissionRef: [PERM-RECEIPT-RECORD]
+
+  - capabilityId: cap-receipt-reverse
+    name: 冲销收款
+    intent: 对错误或异常的收款记录执行冲销
+    utterances:
+      - "把收款 R-2026-001 冲销掉"
+    toolRef: receipt_reverse
+    permissionRef: [PERM-RECEIPT-REVERSE]
+
+  - capabilityId: cap-receipt-query
+    name: 查询收款
+    intent: 按收款编号、合同、开票、收款时间等条件查询收款
+    utterances:
+      - "查一下收款记录"
+    uiUnitRef: ui-receipt-query
+    permissionRef: [PERM-RECEIPT-RECORD]
+
+  # 报表
+  - capabilityId: cap-contract-execution-analysis
+    name: 合同执行情况分析
+    intent: 按部门、责任人、签订日期分析合同的开票与收款完成情况
+    utterances:
+      - "看一下合同执行情况"
+      - "各部门的合同完成率"
+    uiUnitRef: ui-contract-execution-report
+    permissionRef: [PERM-CONTRACT-QUERY-EXECUTION, PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT]
+
+  - capabilityId: cap-dept-summary
+    name: 部门合同统计分析
+    intent: 按部门汇总合同数量、金额、开票、收款与结清情况
+    utterances:
+      - "部门合同统计"
+    uiUnitRef: ui-dept-report
+    permissionRef: [PERM-CONTRACT-QUERY-DEPT-SUMMARY, PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT]
+
+  - capabilityId: cap-invoiced-unreceived
+    name: 已开票未收款分析
+    intent: 查询已开票但尚未收款的明细
+    utterances:
+      - "哪些开票还没收款"
+      - "已开票未收款明细"
+    uiUnitRef: ui-invoiced-unreceived-report
+    permissionRef: [PERM-CONTRACT-QUERY-UNRECEIVED, PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT]
+
+  # 主数据
+  - capabilityId: cap-product-maintain
+    name: 产品信息维护
+    intent: 维护产品档案（编号、名称、类型）
+    utterances:
+      - "维护一下产品"
+      - "新增一个产品"
+    uiUnitRef: ui-product-maintain
+    permissionRef: [PERM-PRODUCT-MAINTAIN]
+
+  - capabilityId: cap-customer-maintain
+    name: 客户信息维护
+    intent: 维护客户档案（编号、名称、类型）
+    utterances:
+      - "维护一下客户"
+      - "新增一个客户"
+    uiUnitRef: ui-customer-maintain
+    permissionRef: [PERM-CUSTOMER-MAINTAIN]
+
+  - capabilityId: cap-department-maintain
+    name: 部门信息维护
+    intent: 维护部门档案
+    utterances:
+      - "维护一下部门"
+    uiUnitRef: ui-department-maintain
+    permissionRef: [PERM-DEPARTMENT-MAINTAIN]
+
+  - capabilityId: cap-employee-maintain
+    name: 人员信息维护
+    intent: 维护人员档案（编号、名称、所属部门）
+    utterances:
+      - "维护一下人员"
+      - "新增一个员工"
+    uiUnitRef: ui-employee-maintain
+    permissionRef: [PERM-EMPLOYEE-MAINTAIN]
+
+# ──────────────────────────────────────────────────────────────────────
+# 工具契约：与 M2 中 triggerType=USER_ACTION 的行为严格 1:1
+#   （triggerType=SYSTEM 的 3 个行为不暴露为工具，由 syncTriggers 同步触发）
+# ──────────────────────────────────────────────────────────────────────
+tools:
+  # ── 合同写操作 ──
+  - toolName: contract_save_as_draft
+    behaviorRef: Contract_SaveAsDraft
+    title: 保存合同草稿
+    description: 保存合同数据并置为草稿状态，不触发审批流
+    inputSchema:  { objectRef: Contract, fields: [contractNo, contractName, contractType, productId, customerId, departmentId, ownerId, signDate, taxRate, totalAmount, purchaseAmount, remark, stages] }
+    outputSchema: { objectRef: Contract, fields: [contractId, status] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-SAVE-DRAFT]
+
+  - toolName: contract_submit
+    behaviorRef: Contract_Submit
+    title: 提交合同审批
+    description: 保存合同并提交进入审批流（财务审批 → 必要时总经理二级审批）
+    inputSchema:  { objectRef: Contract, fields: [contractNo, contractName, contractType, productId, customerId, departmentId, ownerId, signDate, taxRate, totalAmount, purchaseAmount, remark, stages] }
+    outputSchema: { objectRef: Contract, fields: [contractId, status] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-SUBMIT]
+
+  - toolName: contract_resubmit
+    behaviorRef: Contract_Resubmit
+    title: 修改并重新提交合同
+    description: 修改被驳回的合同后重新提交进入审批流
+    inputSchema:  { objectRef: Contract, fields: [contractId, contractNo, contractName, contractType, productId, customerId, departmentId, ownerId, signDate, taxRate, totalAmount, purchaseAmount, remark, stages] }
+    outputSchema: { objectRef: Contract, fields: [contractId, status] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-CREATE]
+
+  - toolName: contract_void_or_archive
+    behaviorRef: Contract_VoidOrArchive
+    title: 作废或归档合同
+    description: 对已结束或异常的合同执行作废或归档操作
+    inputSchema:  { objectRef: Contract, fields: [contractId, action] }
+    outputSchema: { objectRef: Contract, fields: [contractId, status] }
+    annotations:  { readOnlyHint: false, destructiveHint: true }
+    permissionRef: [PERM-CONTRACT-CREATE]
+
+  # ── 开票写操作 ──
+  - toolName: invoice_save_as_draft
+    behaviorRef: Invoice_SaveAsDraft
+    title: 保存开票草稿
+    description: 保存开票数据并置为草稿状态，不触发审批
+    inputSchema:  { objectRef: Invoice, fields: [invoiceNo, contractId, invoiceDate, invoiceAmount, invoiceTaxRate, receivedFlag, allocations] }
+    outputSchema: { objectRef: Invoice, fields: [invoiceId, approvalStatus] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-INVOICE-SAVE-DRAFT]
+
+  - toolName: invoice_submit
+    behaviorRef: Invoice_Submit
+    title: 提交开票审批
+    description: 保存开票并提交进入审批流
+    inputSchema:  { objectRef: Invoice, fields: [invoiceNo, contractId, invoiceDate, invoiceAmount, invoiceTaxRate, receivedFlag, allocations] }
+    outputSchema: { objectRef: Invoice, fields: [invoiceId, approvalStatus] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-INVOICE-SUBMIT]
+
+  - toolName: invoice_resubmit
+    behaviorRef: Invoice_Resubmit
+    title: 修改并重新提交开票
+    description: 修改被驳回的开票后重新提交进入审批流
+    inputSchema:  { objectRef: Invoice, fields: [invoiceId, invoiceNo, contractId, invoiceDate, invoiceAmount, invoiceTaxRate, receivedFlag, allocations] }
+    outputSchema: { objectRef: Invoice, fields: [invoiceId, approvalStatus] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-INVOICE-SUBMIT]
+
+  - toolName: invoice_void
+    behaviorRef: Invoice_Void
+    title: 作废开票
+    description: 对错误或异常的开票执行作废
+    inputSchema:  { objectRef: Invoice, fields: [invoiceId, reason] }
+    outputSchema: { objectRef: Invoice, fields: [invoiceId, approvalStatus] }
+    annotations:  { readOnlyHint: false, destructiveHint: true }
+    permissionRef: [PERM-INVOICE-SUBMIT]
+
+  # ── 收款 ──
+  - toolName: receipt_record
+    behaviorRef: Receipt_Record
+    title: 录入收款
+    description: 为某张开票登记一笔收款记录
+    inputSchema:  { objectRef: Receipt, fields: [receiptNo, contractId, invoiceId, receiptAmount, receiptTime, receiptMethod, remark] }
+    outputSchema: { objectRef: Receipt, fields: [receiptId] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-RECEIPT-RECORD]
+
+  - toolName: receipt_reverse
+    behaviorRef: Receipt_Reverse
+    title: 冲销收款
+    description: 对错误或异常的收款记录执行冲销
+    inputSchema:  { objectRef: Receipt, fields: [receiptId, reason] }
+    outputSchema: { objectRef: Receipt, fields: [receiptId] }
+    annotations:  { readOnlyHint: false, destructiveHint: true }
+    permissionRef: [PERM-RECEIPT-REVERSE]
+
+  # ── 主数据 ──
+  - toolName: product_maintain
+    behaviorRef: Product_Maintain
+    title: 维护产品
+    description: 新增或修改产品档案
+    inputSchema:  { objectRef: Product, fields: [productId, productName, productType] }
+    outputSchema: { objectRef: Product, fields: [productId] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-PRODUCT-MAINTAIN]
+
+  - toolName: customer_maintain
+    behaviorRef: Customer_Maintain
+    title: 维护客户
+    description: 新增或修改客户档案
+    inputSchema:  { objectRef: Customer, fields: [customerId, customerName, customerType] }
+    outputSchema: { objectRef: Customer, fields: [customerId] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-CUSTOMER-MAINTAIN]
+
+  - toolName: department_maintain
+    behaviorRef: Department_Maintain
+    title: 维护部门
+    description: 新增或修改部门档案
+    inputSchema:  { objectRef: Department, fields: [departmentId, departmentName] }
+    outputSchema: { objectRef: Department, fields: [departmentId] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-DEPARTMENT-MAINTAIN]
+
+  - toolName: employee_maintain
+    behaviorRef: Employee_Maintain
+    title: 维护人员
+    description: 新增或修改人员档案
+    inputSchema:  { objectRef: Employee, fields: [employeeId, employeeName, departmentId] }
+    outputSchema: { objectRef: Employee, fields: [employeeId] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-EMPLOYEE-MAINTAIN]
+
+  # ── 查询 / 报表（readOnlyHint=true）──
+  - toolName: contract_query_list
+    behaviorRef: Contract_QueryList
+    title: 查询合同列表
+    description: 按合同编号、名称、类型、部门、日期范围等条件查询合同列表
+    inputSchema:  { objectRef: Contract, fields: [contractNo, contractName, contractType, departmentId, signDateFrom, signDateTo] }
+    outputSchema: { objectRef: Contract, fields: [contractId, contractNo, contractName, contractType, customerId, departmentId, ownerId, totalAmount, status] }
+    annotations:  { readOnlyHint: true, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-QUERY-LIST, PERM-CONTRACT-QUERY-LIST-OWN-DEPT]
+
+  - toolName: contract_query_detail
+    behaviorRef: Contract_QueryDetail
+    title: 查看合同详情
+    description: 按合同 ID 返回单份合同的完整信息（含付款阶段明细）
+    inputSchema:  { objectRef: Contract, fields: [contractId] }
+    outputSchema: { objectRef: Contract, fields: [contractId, contractNo, contractName, contractType, productId, customerId, departmentId, ownerId, signDate, taxRate, totalAmount, purchaseAmount, remark, stages] }
+    annotations:  { readOnlyHint: true, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-QUERY-DETAIL, PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT]
+
+  - toolName: contract_query_execution_analysis
+    behaviorRef: Contract_QueryExecutionAnalysis
+    title: 合同执行情况分析
+    description: 按部门、责任人、签订日期分析合同的开票与收款完成情况
+    inputSchema:  { objectRef: Contract, fields: [departmentId, ownerId, signDateFrom, signDateTo] }
+    outputSchema: { queryReportRef: REP-CONTRACT-EXECUTION }
+    annotations:  { readOnlyHint: true, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-QUERY-EXECUTION, PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT]
+
+  - toolName: contract_query_department_summary
+    behaviorRef: Contract_QueryDepartmentSummary
+    title: 部门合同统计分析
+    description: 按部门汇总合同数量、金额、开票、收款与结清情况
+    inputSchema:  { objectRef: Contract, fields: [signDateFrom, signDateTo, departmentId] }
+    outputSchema: { queryReportRef: REP-DEPT-CONTRACT-SUMMARY }
+    annotations:  { readOnlyHint: true, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-QUERY-DEPT-SUMMARY, PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT]
+
+  - toolName: contract_query_invoiced_unreceived
+    behaviorRef: Contract_QueryInvoicedUnreceived
+    title: 已开票未收款分析
+    description: 查询已开票但尚未收款的明细
+    inputSchema:  { objectRef: Contract, fields: [departmentId, invoiceDateFrom, invoiceDateTo] }
+    outputSchema: { queryReportRef: REP-INVOICED-UNRECEIVED }
+    annotations:  { readOnlyHint: true, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-QUERY-UNRECEIVED, PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT]
+
+  # ── 审批 ──
+  - toolName: contract_approve_finance
+    behaviorRef: Contract_ApproveFinance
+    title: 财务审批合同
+    description: 财务经理对合同执行通过或驳回（含审批意见）
+    inputSchema:  { objectRef: Contract, fields: [contractId, decision, comment] }
+    outputSchema: { objectRef: Contract, fields: [contractId, status] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-APPROVE-FINANCE]
+
+  - toolName: contract_approve_general_manager
+    behaviorRef: Contract_ApproveGeneralManager
+    title: 总经理审批合同
+    description: 总经理对超过财务审批阈值的合同执行二级审批
+    inputSchema:  { objectRef: Contract, fields: [contractId, decision, comment] }
+    outputSchema: { objectRef: Contract, fields: [contractId, status] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-CONTRACT-APPROVE-GM]
+
+  - toolName: invoice_approve_finance
+    behaviorRef: Invoice_ApproveFinance
+    title: 审批开票
+    description: 财务对开票执行通过或驳回（含审批意见）
+    inputSchema:  { objectRef: Invoice, fields: [invoiceId, decision, comment] }
+    outputSchema: { objectRef: Invoice, fields: [invoiceId, approvalStatus] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [PERM-INVOICE-APPROVE]
+
+# ──────────────────────────────────────────────────────────────────────
+# 界面单元：unitType × renderMode 两个正交维度
+#   本系统全部为 A2UI_SURFACE / STATIC（事务型 + 建模期确定）
+# ──────────────────────────────────────────────────────────────────────
+uiUnits:
+  # ════════════════════════════════════════════════════════════════
+  # 合同录入（主从维护，A2UI_SURFACE / STATIC）
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-contract-maintain
+    name: 合同录入
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: contract-maintain
+      root: root-col
+      dataModel:
+        "/contract": Contract
+        "/contract/stages": Contract.stages
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, card-main, tbl-stage, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "合同录入" }
+        - id: card-main
+          component: Card
+          label: 主对象字段
+          children: { explicitList: [txt-contract-no, txt-contract-name, sel-contract-type, pick-product, pick-customer, pick-department, pick-owner, dtp-sign-date, txt-tax-rate, num-total-amount, num-purchase-amount, txt-remark] }
+        - id: txt-contract-no
+          component: TextField
+          label: 合同编号
+          required: true
+          value: { path: "/contract/contractNo" }
+          dataBinding: Contract.contractNo
+        - id: txt-contract-name
+          component: TextField
+          label: 合同名称
+          required: true
+          value: { path: "/contract/contractName" }
+          dataBinding: Contract.contractName
+        - id: sel-contract-type
+          component: Select
+          label: 合同类型
+          required: true
+          value: { path: "/contract/contractType" }
+          dataBinding: Contract.contractType
+        - id: pick-product
+          component: EntityPicker
+          label: 所属产品
+          required: true
+          value: { path: "/contract/productId" }
+          dataBinding: Contract.productId
+          targetAggregate: Product
+          searchToolRef: contract_query_list
+        - id: pick-customer
+          component: EntityPicker
+          label: 所属客户
+          required: true
+          value: { path: "/contract/customerId" }
+          dataBinding: Contract.customerId
+          targetAggregate: Customer
+          searchToolRef: contract_query_list
+        - id: pick-department
+          component: EntityPicker
+          label: 所属部门
+          required: true
+          value: { path: "/contract/departmentId" }
+          dataBinding: Contract.departmentId
+          targetAggregate: Department
+          searchToolRef: contract_query_list
+        - id: pick-owner
+          component: EntityPicker
+          label: 责任人
+          required: true
+          value: { path: "/contract/ownerId" }
+          dataBinding: Contract.ownerId
+          targetAggregate: Employee
+          searchToolRef: contract_query_list
+        - id: dtp-sign-date
+          component: DateTimeInput
+          label: 签订时间
+          required: true
+          value: { path: "/contract/signDate" }
+          dataBinding: Contract.signDate
+        - id: txt-tax-rate
+          component: NumberInput
+          label: 合同税率
+          required: true
+          value: { path: "/contract/taxRate" }
+          dataBinding: Contract.taxRate
+        - id: num-total-amount
+          component: NumberInput
+          label: 合同总金额
+          required: true
+          value: { path: "/contract/totalAmount" }
+          dataBinding: Contract.totalAmount
+        - id: num-purchase-amount
+          component: NumberInput
+          label: 采购金额
+          required: true
+          value: { path: "/contract/purchaseAmount" }
+          dataBinding: Contract.purchaseAmount
+        - id: txt-remark
+          component: TextArea
+          label: 备注
+          value: { path: "/contract/remark" }
+          dataBinding: Contract.remark
+        - id: tbl-stage
+          component: DataTable
+          label: 付款阶段
+          inlineEdit: true
+          children: { template: { dataPath: "/contract/stages" } }
+          columns:
+            - { field: stageNo,    label: 阶段编号 }
+            - { field: stageName,  label: 阶段名称 }
+            - { field: ratio,      label: 付款比例 }
+            - { field: stageAmount,label: 阶段应付金额 }
+            - { field: invoiceStatus, label: 开票状态 }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-draft, btn-submit] }
+        - id: btn-draft
+          component: Button
+          label: 保存草稿
+          action: { event: contract_save_draft }
+        - id: btn-submit
+          component: Button
+          label: 提交
+          action: { event: contract_submit }
     actions:
-      - actionId: actSaveDraft
+      - actionId: act-contract-draft
         name: 保存草稿
         actionType: DRAFT
+        event: contract_save_draft
+        toolRef: contract_save_as_draft
         behaviorRef: Contract_SaveAsDraft
         permissionRef: [PERM-CONTRACT-SAVE-DRAFT]
-      - actionId: actSubmit
+      - actionId: act-contract-submit
         name: 提交
         actionType: SUBMIT
+        event: contract_submit
+        toolRef: contract_submit
         behaviorRef: Contract_Submit
         permissionRef: [PERM-CONTRACT-SUBMIT]
-      - actionId: actCancel
-        name: 取消
-        actionType: BUTTON
-        behaviorRef: Contract_SaveAsDraft
 
-  # ══════════════════════════════════════════════════════════
+  # ════════════════════════════════════════════════════════════════
   # 合同查询（查询列表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmContractQuery
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-contract-query
     name: 合同查询
-    screenType: QUERY_LIST
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 合同信息查询                                                  │
-      │ 合同编号:[txtContractNo]  合同名称:[txtContractName]  合同类型:(cboContractType) │
-      │ 所属部门:[pslDepartment]  签订日期从:{dtpFrom}  到:{dtpTo}     │
-      │ [btnQuery 查询] [btnReset 重置] [btnExport 导出]               │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdResult                                                    │
-      │  合同编号 | 合同名称 | 产品 | 客户 | 部门 | 责任人 | 金额 | 状态 │
-      │ 分页: [lblPaging 共N条] [cboPageSize 每页20条] [btnPrev] [btnNext] │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtContractNo
-        type: TEXTBOX
-        label: 合同编号
-        io: I
-        dataBinding: Contract.contractNo
-      - id: txtContractName
-        type: TEXTBOX
-        label: 合同名称
-        io: I
-        dataBinding: Contract.contractName
-      - id: cboContractType
-        type: COMBO
-        label: 合同类型
-        io: I
-        dataBinding: Contract.contractType
-      - id: pslDepartment
-        type: POPUP_SELECT
-        label: 所属部门
-        io: I
-        dataBinding: Contract.departmentId
-      - id: dtpFrom
-        type: DATEPICKER
-        label: 签订日期从
-        io: I
-      - id: dtpTo
-        type: DATEPICKER
-        label: 到
-        io: I
-      - id: grdResult
-        type: GRID
-        label: 查询结果
-        io: O
-        dataSource: REP-CONTRACT-LIST
-      - id: btnQuery
-        type: BUTTON
-        label: 查询
-      - id: btnReset
-        type: BUTTON
-        label: 重置
-      - id: btnExport
-        type: BUTTON
-        label: 导出
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: contract-query
+      root: root-col
+      dataModel:
+        "/query": Contract
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, card-filter, tbl-result, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "合同信息查询" }
+        - id: card-filter
+          component: Card
+          label: 查询条件
+          children: { explicitList: [txt-contract-no, txt-contract-name, sel-contract-type, pick-department, dtp-from, dtp-to] }
+        - id: txt-contract-no
+          component: TextField
+          label: 合同编号
+          value: { path: "/query/contractNo" }
+          dataBinding: Contract.contractNo
+        - id: txt-contract-name
+          component: TextField
+          label: 合同名称
+          value: { path: "/query/contractName" }
+          dataBinding: Contract.contractName
+        - id: sel-contract-type
+          component: Select
+          label: 合同类型
+          value: { path: "/query/contractType" }
+          dataBinding: Contract.contractType
+        - id: pick-department
+          component: EntityPicker
+          label: 所属部门
+          value: { path: "/query/departmentId" }
+          dataBinding: Contract.departmentId
+          targetAggregate: Department
+          searchToolRef: contract_query_list
+        - id: dtp-from
+          component: DateTimeInput
+          label: 签订日期从
+          value: { path: "/query/signDateFrom" }
+        - id: dtp-to
+          component: DateTimeInput
+          label: 到
+          value: { path: "/query/signDateTo" }
+        - id: tbl-result
+          component: DataTable
+          label: 查询结果
+          pagination: true
+          dataSourceRef: REP-CONTRACT-LIST
+          columns:
+            - { field: contractNo,   label: 合同编号 }
+            - { field: contractName, label: 合同名称 }
+            - { field: productName,  label: 产品 }
+            - { field: customerName, label: 客户 }
+            - { field: departmentName, label: 部门 }
+            - { field: ownerName,    label: 责任人 }
+            - { field: totalAmount,  label: 金额 }
+            - { field: status,       label: 状态 }
+          rowActions:
+            - { actionId: act-contract-detail, label: 查看详情 }
+            - { actionId: act-contract-void-archive, label: 作废/归档, destructive: true }
+            - { actionId: act-contract-resubmit, label: 重新提交 }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-query, btn-reset, btn-export] }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: contract_query_list }
+        - id: btn-reset
+          component: Button
+          label: 重置
+          action: { event: contract_query_reset }
+        - id: btn-export
+          component: Button
+          label: 导出
+          action: { event: contract_query_export }
     actions:
-      - actionId: actQuery
+      - actionId: act-contract-query-list
         name: 查询
-        actionType: BUTTON
+        actionType: QUERY
+        event: contract_query_list
+        toolRef: contract_query_list
         behaviorRef: Contract_QueryList
         permissionRef: [PERM-CONTRACT-QUERY-LIST, PERM-CONTRACT-QUERY-LIST-OWN-DEPT]
-      - actionId: actDetail
+      - actionId: act-contract-detail
         name: 查看详情
-        actionType: BUTTON
+        actionType: QUERY
+        event: contract_query_detail
+        toolRef: contract_query_detail
         behaviorRef: Contract_QueryDetail
         permissionRef: [PERM-CONTRACT-QUERY-DETAIL, PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT]
+      - actionId: act-contract-resubmit
+        name: 重新提交
+        actionType: SUBMIT
+        event: contract_resubmit
+        toolRef: contract_resubmit
+        behaviorRef: Contract_Resubmit
+        permissionRef: [PERM-CONTRACT-CREATE]
+      - actionId: act-contract-void-archive
+        name: 作废/归档
+        actionType: EXECUTE
+        event: contract_void_or_archive
+        toolRef: contract_void_or_archive
+        behaviorRef: Contract_VoidOrArchive
+        permissionRef: [PERM-CONTRACT-CREATE]
 
-  # ══════════════════════════════════════════════════════════
-  # 开票录入（主从表，带审批双按钮）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmInvoiceMaintain
+  # ════════════════════════════════════════════════════════════════
+  # 开票录入（主从维护）
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-invoice-maintain
     name: 开票录入
-    screenType: MASTER_DETAIL_FORM
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 开票录入（主从表）                                            │
-      │ 开票编号:[txtInvoiceNo]  对应合同:[pslContract]    开票时间:{dtpInvoiceDate} │
-      │ 开票金额:[txtInvoiceAmount] 开票税率:[txtTaxRate]  是否收款:[chkIsPaid]      │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 付款阶段分摊（从表，表格内动态维护）                          │
-      │ @grdAllocation                                                │
-      │  付款阶段 | 阶段应付金额 | 已分摊金额 | 本次分摊金额            │
-      │  [btnAddRow]                                                  │
-      ├──────────────────────────────────────────────────────────────┤
-      │ [btnSaveDraft 保存草稿] [btnSubmit 提交] [btnCancel 取消]      │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtInvoiceNo
-        type: TEXTBOX
-        label: 开票编号
-        io: I
-        required: true
-        dataBinding: Invoice.invoiceNo
-      - id: pslContract
-        type: POPUP_SELECT
-        label: 对应合同
-        io: I
-        required: true
-        dataBinding: Invoice.contractId
-      - id: dtpInvoiceDate
-        type: DATEPICKER
-        label: 开票时间
-        io: I
-        required: true
-        dataBinding: Invoice.invoiceDate
-      - id: txtInvoiceAmount
-        type: NUMBER
-        label: 开票金额
-        io: I
-        required: true
-        dataBinding: Invoice.invoiceAmount
-      - id: txtTaxRate
-        type: TEXTBOX
-        label: 开票税率
-        io: I
-        required: true
-        dataBinding: Invoice.invoiceTaxRate
-      - id: chkIsPaid
-        type: CHECKBOX
-        label: 是否收款
-        io: I
-        dataBinding: Invoice.receivedFlag
-      - id: grdAllocation
-        type: GRID
-        label: 付款阶段分摊
-        io: I_O
-        dataBinding: Invoice.allocations
-      - id: btnAddRow
-        type: BUTTON
-        label: 新增行
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: invoice-maintain
+      root: root-col
+      dataModel:
+        "/invoice": Invoice
+        "/invoice/allocations": Invoice.allocations
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, card-main, tbl-allocation, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "开票录入" }
+        - id: card-main
+          component: Card
+          label: 主对象字段
+          children: { explicitList: [txt-invoice-no, pick-contract, dtp-invoice-date, num-invoice-amount, txt-invoice-tax-rate, chk-is-paid] }
+        - id: txt-invoice-no
+          component: TextField
+          label: 开票编号
+          required: true
+          value: { path: "/invoice/invoiceNo" }
+          dataBinding: Invoice.invoiceNo
+        - id: pick-contract
+          component: EntityPicker
+          label: 对应合同
+          required: true
+          value: { path: "/invoice/contractId" }
+          dataBinding: Invoice.contractId
+          targetAggregate: Contract
+          searchToolRef: contract_query_list
+        - id: dtp-invoice-date
+          component: DateTimeInput
+          label: 开票时间
+          required: true
+          value: { path: "/invoice/invoiceDate" }
+          dataBinding: Invoice.invoiceDate
+        - id: num-invoice-amount
+          component: NumberInput
+          label: 开票金额
+          required: true
+          value: { path: "/invoice/invoiceAmount" }
+          dataBinding: Invoice.invoiceAmount
+        - id: txt-invoice-tax-rate
+          component: NumberInput
+          label: 开票税率
+          required: true
+          value: { path: "/invoice/invoiceTaxRate" }
+          dataBinding: Invoice.invoiceTaxRate
+        - id: chk-is-paid
+          component: Checkbox
+          label: 是否收款
+          value: { path: "/invoice/receivedFlag" }
+          dataBinding: Invoice.receivedFlag
+        - id: tbl-allocation
+          component: DataTable
+          label: 付款阶段分摊
+          inlineEdit: true
+          children: { template: { dataPath: "/invoice/allocations" } }
+          columns:
+            - { field: stageName,        label: 付款阶段 }
+            - { field: stageAmount,      label: 阶段应付金额 }
+            - { field: allocatedAmount,  label: 已分摊金额 }
+            - { field: thisAllocation,   label: 本次分摊金额 }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-draft, btn-submit] }
+        - id: btn-draft
+          component: Button
+          label: 保存草稿
+          action: { event: invoice_save_draft }
+        - id: btn-submit
+          component: Button
+          label: 提交
+          action: { event: invoice_submit }
     actions:
-      - actionId: actSaveDraft
+      - actionId: act-invoice-draft
         name: 保存草稿
         actionType: DRAFT
+        event: invoice_save_draft
+        toolRef: invoice_save_as_draft
         behaviorRef: Invoice_SaveAsDraft
         permissionRef: [PERM-INVOICE-SAVE-DRAFT]
-      - actionId: actSubmit
+      - actionId: act-invoice-submit
         name: 提交
         actionType: SUBMIT
+        event: invoice_submit
+        toolRef: invoice_submit
         behaviorRef: Invoice_Submit
         permissionRef: [PERM-INVOICE-SUBMIT]
-      - actionId: actCancel
-        name: 取消
-        actionType: BUTTON
-        behaviorRef: Invoice_SaveAsDraft
 
-  # ══════════════════════════════════════════════════════════
-  # 开票查询（查询列表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmInvoiceQuery
+  # ════════════════════════════════════════════════════════════════
+  # 开票查询
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-invoice-query
     name: 开票查询
-    screenType: QUERY_LIST
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 开票信息查询                                                  │
-      │ 开票编号:[txtInvoiceNo]  对应合同:[pslContract]    开票状态:(cboApprovalStatus) │
-      │ 开票日期从:{dtpFrom}  到:{dtpTo}                               │
-      │ [btnQuery 查询] [btnReset 重置]                               │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdResult                                                    │
-      │  开票编号 | 合同 | 开票金额 | 税率 | 开票日期 | 是否收款 | 状态 │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtInvoiceNo
-        type: TEXTBOX
-        label: 开票编号
-        io: I
-        dataBinding: Invoice.invoiceNo
-      - id: pslContract
-        type: POPUP_SELECT
-        label: 对应合同
-        io: I
-        dataBinding: Invoice.contractId
-      - id: cboApprovalStatus
-        type: COMBO
-        label: 开票状态
-        io: I
-        dataBinding: Invoice.approvalStatus
-      - id: dtpFrom
-        type: DATEPICKER
-        label: 开票日期从
-        io: I
-      - id: dtpTo
-        type: DATEPICKER
-        label: 到
-        io: I
-      - id: grdResult
-        type: GRID
-        label: 查询结果
-        io: O
-        dataSource: REP-INVOICED-UNRECEIVED
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: invoice-query
+      root: root-col
+      dataModel:
+        "/query": Invoice
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, card-filter, tbl-result, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "开票信息查询" }
+        - id: card-filter
+          component: Card
+          label: 查询条件
+          children: { explicitList: [txt-invoice-no, pick-contract, sel-approval-status, dtp-from, dtp-to] }
+        - id: txt-invoice-no
+          component: TextField
+          label: 开票编号
+          value: { path: "/query/invoiceNo" }
+          dataBinding: Invoice.invoiceNo
+        - id: pick-contract
+          component: EntityPicker
+          label: 对应合同
+          value: { path: "/query/contractId" }
+          dataBinding: Invoice.contractId
+          targetAggregate: Contract
+          searchToolRef: contract_query_list
+        - id: sel-approval-status
+          component: Select
+          label: 开票状态
+          value: { path: "/query/approvalStatus" }
+          dataBinding: Invoice.approvalStatus
+        - id: dtp-from
+          component: DateTimeInput
+          label: 开票日期从
+          value: { path: "/query/invoiceDateFrom" }
+        - id: dtp-to
+          component: DateTimeInput
+          label: 到
+          value: { path: "/query/invoiceDateTo" }
+        - id: tbl-result
+          component: DataTable
+          label: 查询结果
+          pagination: true
+          dataSourceRef: REP-INVOICED-UNRECEIVED
+          columns:
+            - { field: invoiceNo,      label: 开票编号 }
+            - { field: contractName,   label: 合同 }
+            - { field: invoiceAmount,  label: 开票金额 }
+            - { field: invoiceTaxRate, label: 税率 }
+            - { field: invoiceDate,    label: 开票日期 }
+            - { field: receivedFlag,   label: 是否收款 }
+            - { field: approvalStatus, label: 状态 }
+          rowActions:
+            - { actionId: act-invoice-void, label: 作废, destructive: true }
+            - { actionId: act-invoice-resubmit, label: 重新提交 }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-query, btn-reset] }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: invoice_query }
+        - id: btn-reset
+          component: Button
+          label: 重置
+          action: { event: invoice_query_reset }
     actions:
-      - actionId: actQuery
+      - actionId: act-invoice-query-list
         name: 查询
-        actionType: BUTTON
+        actionType: QUERY
+        event: invoice_query
+        toolRef: contract_query_invoiced_unreceived
         behaviorRef: Contract_QueryInvoicedUnreceived
         permissionRef: [PERM-CONTRACT-QUERY-UNRECEIVED, PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT]
+      - actionId: act-invoice-void
+        name: 作废
+        actionType: EXECUTE
+        event: invoice_void
+        toolRef: invoice_void
+        behaviorRef: Invoice_Void
+        permissionRef: [PERM-INVOICE-SUBMIT]
+      - actionId: act-invoice-resubmit
+        name: 重新提交
+        actionType: SUBMIT
+        event: invoice_resubmit
+        toolRef: invoice_resubmit
+        behaviorRef: Invoice_Resubmit
+        permissionRef: [PERM-INVOICE-SUBMIT]
 
-  # ══════════════════════════════════════════════════════════
-  # 收款录入（单表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmReceiptMaintain
+  # ════════════════════════════════════════════════════════════════
+  # 收款录入（单对象录入）
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-receipt-maintain
     name: 收款录入
-    screenType: SINGLE_FORM
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 收款录入                                                      │
-      │ 收款编号:[txtReceiptNo]   对应合同:[pslContract]              │
-      │ 对应开票:[pslInvoice]     收款金额:[txtAmount]                │
-      │ 收款时间:{dtpReceiptTime} 收款方式:(cboMethod)                │
-      │ 备注:[txtaRemark]                                             │
-      ├──────────────────────────────────────────────────────────────┤
-      │ [btnSave 保存] [btnCancel 取消]                               │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtReceiptNo
-        type: TEXTBOX
-        label: 收款编号
-        io: I
-        required: true
-        dataBinding: Receipt.receiptNo
-      - id: pslContract
-        type: POPUP_SELECT
-        label: 对应合同
-        io: I
-        required: true
-        dataBinding: Receipt.contractId
-      - id: pslInvoice
-        type: POPUP_SELECT
-        label: 对应开票
-        io: I
-        required: true
-        dataBinding: Receipt.invoiceId
-      - id: txtAmount
-        type: NUMBER
-        label: 收款金额
-        io: I
-        required: true
-        dataBinding: Receipt.receiptAmount
-      - id: dtpReceiptTime
-        type: DATEPICKER
-        label: 收款时间
-        io: I
-        required: true
-        dataBinding: Receipt.receiptTime
-      - id: cboMethod
-        type: COMBO
-        label: 收款方式
-        io: I
-        dataBinding: Receipt.receiptMethod
-      - id: txtaRemark
-        type: TEXTAREA
-        label: 备注
-        io: I
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: receipt-maintain
+      root: root-col
+      dataModel:
+        "/receipt": Receipt
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, card-main, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "收款录入" }
+        - id: card-main
+          component: Card
+          label: 主对象字段
+          children: { explicitList: [txt-receipt-no, pick-contract, pick-invoice, num-amount, dtp-receipt-time, sel-method, txt-remark] }
+        - id: txt-receipt-no
+          component: TextField
+          label: 收款编号
+          required: true
+          value: { path: "/receipt/receiptNo" }
+          dataBinding: Receipt.receiptNo
+        - id: pick-contract
+          component: EntityPicker
+          label: 对应合同
+          required: true
+          value: { path: "/receipt/contractId" }
+          dataBinding: Receipt.contractId
+          targetAggregate: Contract
+          searchToolRef: contract_query_list
+        - id: pick-invoice
+          component: EntityPicker
+          label: 对应开票
+          required: true
+          value: { path: "/receipt/invoiceId" }
+          dataBinding: Receipt.invoiceId
+          targetAggregate: Invoice
+          searchToolRef: contract_query_invoiced_unreceived
+        - id: num-amount
+          component: NumberInput
+          label: 收款金额
+          required: true
+          value: { path: "/receipt/receiptAmount" }
+          dataBinding: Receipt.receiptAmount
+        - id: dtp-receipt-time
+          component: DateTimeInput
+          label: 收款时间
+          required: true
+          value: { path: "/receipt/receiptTime" }
+          dataBinding: Receipt.receiptTime
+        - id: sel-method
+          component: Select
+          label: 收款方式
+          value: { path: "/receipt/receiptMethod" }
+          dataBinding: Receipt.receiptMethod
+        - id: txt-remark
+          component: TextArea
+          label: 备注
+          value: { path: "/receipt/remark" }
+          dataBinding: Receipt.remark
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-save] }
+        - id: btn-save
+          component: Button
+          label: 保存
+          action: { event: receipt_record }
     actions:
-      - actionId: actSave
+      - actionId: act-receipt-save
         name: 保存
-        actionType: BUTTON
+        actionType: EXECUTE
+        event: receipt_record
+        toolRef: receipt_record
         behaviorRef: Receipt_Record
         permissionRef: [PERM-RECEIPT-RECORD]
-      - actionId: actCancel
-        name: 取消
-        actionType: BUTTON
-        behaviorRef: Receipt_Record
 
-  # ══════════════════════════════════════════════════════════
-  # 收款查询（查询列表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmReceiptQuery
+  # ════════════════════════════════════════════════════════════════
+  # 收款查询
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-receipt-query
     name: 收款查询
-    screenType: QUERY_LIST
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 收款信息查询                                                  │
-      │ 收款编号:[txtReceiptNo]  对应合同:[pslContract]    对应开票:[pslInvoice] │
-      │ 收款时间从:{dtpFrom}  到:{dtpTo}                               │
-      │ [btnQuery 查询] [btnReset 重置]                               │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdResult                                                    │
-      │  收款编号 | 合同 | 开票 | 收款金额 | 收款时间 | 方式 | 状态     │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtReceiptNo
-        type: TEXTBOX
-        label: 收款编号
-        io: I
-        dataBinding: Receipt.receiptNo
-      - id: pslContract
-        type: POPUP_SELECT
-        label: 对应合同
-        io: I
-        dataBinding: Receipt.contractId
-      - id: pslInvoice
-        type: POPUP_SELECT
-        label: 对应开票
-        io: I
-        dataBinding: Receipt.invoiceId
-      - id: dtpFrom
-        type: DATEPICKER
-        label: 收款时间从
-        io: I
-      - id: dtpTo
-        type: DATEPICKER
-        label: 到
-        io: I
-      - id: grdResult
-        type: GRID
-        label: 查询结果
-        io: O
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: receipt-query
+      root: root-col
+      dataModel:
+        "/query": Receipt
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, card-filter, tbl-result, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "收款信息查询" }
+        - id: card-filter
+          component: Card
+          label: 查询条件
+          children: { explicitList: [txt-receipt-no, pick-contract, pick-invoice, dtp-from, dtp-to] }
+        - id: txt-receipt-no
+          component: TextField
+          label: 收款编号
+          value: { path: "/query/receiptNo" }
+          dataBinding: Receipt.receiptNo
+        - id: pick-contract
+          component: EntityPicker
+          label: 对应合同
+          value: { path: "/query/contractId" }
+          dataBinding: Receipt.contractId
+          targetAggregate: Contract
+          searchToolRef: contract_query_list
+        - id: pick-invoice
+          component: EntityPicker
+          label: 对应开票
+          value: { path: "/query/invoiceId" }
+          dataBinding: Receipt.invoiceId
+          targetAggregate: Invoice
+          searchToolRef: contract_query_invoiced_unreceived
+        - id: dtp-from
+          component: DateTimeInput
+          label: 收款时间从
+          value: { path: "/query/receiptTimeFrom" }
+        - id: dtp-to
+          component: DateTimeInput
+          label: 到
+          value: { path: "/query/receiptTimeTo" }
+        - id: tbl-result
+          component: DataTable
+          label: 查询结果
+          pagination: true
+          columns:
+            - { field: receiptNo,      label: 收款编号 }
+            - { field: contractName,   label: 合同 }
+            - { field: invoiceNo,      label: 开票 }
+            - { field: receiptAmount,  label: 收款金额 }
+            - { field: receiptTime,    label: 收款时间 }
+            - { field: receiptMethod,  label: 方式 }
+            - { field: status,         label: 状态 }
+          rowActions:
+            - { actionId: act-receipt-reverse, label: 冲销, destructive: true }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-query, btn-reset] }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: receipt_query }
+        - id: btn-reset
+          component: Button
+          label: 重置
+          action: { event: receipt_query_reset }
     actions:
-      - actionId: actQuery
+      - actionId: act-receipt-query
         name: 查询
-        actionType: BUTTON
-        behaviorRef: Receipt_Record
+        actionType: QUERY
+        event: receipt_query
+        toolRef: contract_query_list
+        behaviorRef: Contract_QueryList
         permissionRef: [PERM-RECEIPT-RECORD]
-      - actionId: actReverse
+      - actionId: act-receipt-reverse
         name: 冲销
-        actionType: BUTTON
+        actionType: EXECUTE
+        event: receipt_reverse
+        toolRef: receipt_reverse
         behaviorRef: Receipt_Reverse
         permissionRef: [PERM-RECEIPT-REVERSE]
 
-  # ══════════════════════════════════════════════════════════
-  # 合同审批（审批）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmContractApproval
+  # ════════════════════════════════════════════════════════════════
+  # 合同审批
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-contract-approval
     name: 合同审批
-    screenType: QUERY_LIST
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 待审批合同列表                                                │
-      │ @grdApprovalList                                              │
-      │  合同编号 | 名称 | 金额 | 提交人 | 提交时间 | 状态             │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 审批意见: [txtaComment]                                       │
-      │ [btnApprove 通过] [btnReject 驳回] [btnCancel 取消]            │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: grdApprovalList
-        type: GRID
-        label: 待审批合同列表
-        io: O
-      - id: txtaComment
-        type: TEXTAREA
-        label: 审批意见
-        io: I
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: contract-approval
+      root: root-col
+      dataModel:
+        "/query": Contract
+        "/approval": Contract
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, tbl-approval, txt-comment, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "待审批合同" }
+        - id: tbl-approval
+          component: DataTable
+          label: 待审批合同列表
+          pagination: true
+          columns:
+            - { field: contractNo,    label: 合同编号 }
+            - { field: contractName,  label: 名称 }
+            - { field: totalAmount,   label: 金额 }
+            - { field: submitterName, label: 提交人 }
+            - { field: submitTime,    label: 提交时间 }
+            - { field: status,        label: 状态 }
+          rowActions:
+            - { actionId: act-contract-detail, label: 查看详情 }
+        - id: txt-comment
+          component: TextArea
+          label: 审批意见
+          value: { path: "/approval/comment" }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-approve, btn-reject] }
+        - id: btn-approve
+          component: Button
+          label: 通过
+          action: { event: contract_approve_finance }
+        - id: btn-reject
+          component: Button
+          label: 驳回
+          action: { event: contract_approve_finance }
     actions:
-      - actionId: actApprove
+      - actionId: act-contract-approve
         name: 通过
         actionType: APPROVE
+        event: contract_approve_finance
+        toolRef: contract_approve_finance
         behaviorRef: Contract_ApproveFinance
         permissionRef: [PERM-CONTRACT-APPROVE-FINANCE]
-      - actionId: actReject
+      - actionId: act-contract-reject
         name: 驳回
         actionType: REJECT
+        event: contract_approve_finance
+        toolRef: contract_approve_finance
         behaviorRef: Contract_ApproveFinance
         permissionRef: [PERM-CONTRACT-APPROVE-FINANCE]
+      - actionId: act-contract-detail
+        name: 查看详情
+        actionType: QUERY
+        event: contract_query_detail
+        toolRef: contract_query_detail
+        behaviorRef: Contract_QueryDetail
+        permissionRef: [PERM-CONTRACT-QUERY-DETAIL, PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT]
 
-  # ══════════════════════════════════════════════════════════
-  # 开票审批（审批）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmInvoiceApproval
+  # ════════════════════════════════════════════════════════════════
+  # 开票审批
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-invoice-approval
     name: 开票审批
-    screenType: QUERY_LIST
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 待审批开票列表                                                │
-      │ @grdApprovalList                                              │
-      │  开票编号 | 合同 | 金额 | 提交人 | 提交时间 | 状态             │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 审批意见: [txtaComment]                                       │
-      │ [btnApprove 通过] [btnReject 驳回] [btnCancel 取消]            │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: grdApprovalList
-        type: GRID
-        label: 待审批开票列表
-        io: O
-      - id: txtaComment
-        type: TEXTAREA
-        label: 审批意见
-        io: I
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: invoice-approval
+      root: root-col
+      dataModel:
+        "/query": Invoice
+        "/approval": Invoice
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, tbl-approval, txt-comment, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "待审批开票" }
+        - id: tbl-approval
+          component: DataTable
+          label: 待审批开票列表
+          pagination: true
+          columns:
+            - { field: invoiceNo,     label: 开票编号 }
+            - { field: contractName,  label: 合同 }
+            - { field: invoiceAmount, label: 金额 }
+            - { field: submitterName, label: 提交人 }
+            - { field: submitTime,    label: 提交时间 }
+            - { field: approvalStatus, label: 状态 }
+        - id: txt-comment
+          component: TextArea
+          label: 审批意见
+          value: { path: "/approval/comment" }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-approve, btn-reject] }
+        - id: btn-approve
+          component: Button
+          label: 通过
+          action: { event: invoice_approve_finance }
+        - id: btn-reject
+          component: Button
+          label: 驳回
+          action: { event: invoice_approve_finance }
     actions:
-      - actionId: actApprove
+      - actionId: act-invoice-approve
         name: 通过
         actionType: APPROVE
+        event: invoice_approve_finance
+        toolRef: invoice_approve_finance
         behaviorRef: Invoice_ApproveFinance
         permissionRef: [PERM-INVOICE-APPROVE]
-      - actionId: actReject
+      - actionId: act-invoice-reject
         name: 驳回
         actionType: REJECT
+        event: invoice_approve_finance
+        toolRef: invoice_approve_finance
         behaviorRef: Invoice_ApproveFinance
         permissionRef: [PERM-INVOICE-APPROVE]
 
-  # ══════════════════════════════════════════════════════════
-  # 合同执行情况分析（查询列表/报表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmContractExecutionReport
+  # ════════════════════════════════════════════════════════════════
+  # 合同执行情况分析
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-contract-execution-report
     name: 合同执行情况分析
-    screenType: QUERY_LIST
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 合同执行情况分析                                              │
-      │ 所属部门:[pslDepartment]  签订日期从:{dtpFrom}  到:{dtpTo}     │
-      │ 责任人:[pslOwner]                                            │
-      │ [btnQuery 查询] [btnExport 导出]                               │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdResult                                                    │
-      │  合同编号 | 名称 | 合同金额 | 累计开票 | 累计收款 | 未收款 | 收款完成率 │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: pslDepartment
-        type: POPUP_SELECT
-        label: 所属部门
-        io: I
-      - id: dtpFrom
-        type: DATEPICKER
-        label: 签订日期从
-        io: I
-      - id: dtpTo
-        type: DATEPICKER
-        label: 到
-        io: I
-      - id: pslOwner
-        type: POPUP_SELECT
-        label: 责任人
-        io: I
-      - id: grdResult
-        type: GRID
-        label: 分析结果
-        io: O
-        dataSource: REP-CONTRACT-EXECUTION
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: contract-execution-report
+      root: root-col
+      dataModel:
+        "/query": Contract
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, card-filter, tbl-result, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "合同执行情况分析" }
+        - id: card-filter
+          component: Card
+          label: 查询条件
+          children: { explicitList: [pick-department, pick-owner, dtp-from, dtp-to] }
+        - id: pick-department
+          component: EntityPicker
+          label: 所属部门
+          value: { path: "/query/departmentId" }
+          dataBinding: Contract.departmentId
+          targetAggregate: Department
+          searchToolRef: contract_query_list
+        - id: pick-owner
+          component: EntityPicker
+          label: 责任人
+          value: { path: "/query/ownerId" }
+          dataBinding: Contract.ownerId
+          targetAggregate: Employee
+          searchToolRef: contract_query_list
+        - id: dtp-from
+          component: DateTimeInput
+          label: 签订日期从
+          value: { path: "/query/signDateFrom" }
+        - id: dtp-to
+          component: DateTimeInput
+          label: 到
+          value: { path: "/query/signDateTo" }
+        - id: tbl-result
+          component: DataTable
+          label: 分析结果
+          pagination: true
+          dataSourceRef: REP-CONTRACT-EXECUTION
+          columns:
+            - { field: contractNo,        label: 合同编号 }
+            - { field: contractName,      label: 名称 }
+            - { field: totalAmount,       label: 合同金额 }
+            - { field: invoicedAmount,    label: 累计开票 }
+            - { field: receivedAmount,    label: 累计收款 }
+            - { field: unreceivedAmount,  label: 未收款 }
+            - { field: receivedRate,      label: 收款完成率 }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-query, btn-export] }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: contract_query_execution_analysis }
+        - id: btn-export
+          component: Button
+          label: 导出
+          action: { event: contract_query_execution_analysis }
     actions:
-      - actionId: actQuery
+      - actionId: act-execution-query
         name: 查询
-        actionType: BUTTON
+        actionType: QUERY
+        event: contract_query_execution_analysis
+        toolRef: contract_query_execution_analysis
         behaviorRef: Contract_QueryExecutionAnalysis
         permissionRef: [PERM-CONTRACT-QUERY-EXECUTION, PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT]
 
-  # ══════════════════════════════════════════════════════════
-  # 部门合同统计分析（查询列表/报表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmDeptReport
+  # ════════════════════════════════════════════════════════════════
+  # 部门合同统计分析
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-dept-report
     name: 部门合同统计分析
-    screenType: QUERY_LIST
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 部门合同统计分析                                              │
-      │ 签订日期从:{dtpFrom}  到:{dtpTo}    部门:[pslDepartment]      │
-      │ [btnQuery 查询] [btnExport 导出]                               │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdResult                                                    │
-      │  部门 | 合同数量 | 合同金额 | 开票金额 | 收款金额 | 未收款 | 结清数 │
-      │ 分页: [lblPaging 共N条]                                        │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: dtpFrom
-        type: DATEPICKER
-        label: 签订日期从
-        io: I
-      - id: dtpTo
-        type: DATEPICKER
-        label: 到
-        io: I
-      - id: pslDepartment
-        type: POPUP_SELECT
-        label: 部门
-        io: I
-      - id: grdResult
-        type: GRID
-        label: 统计结果
-        io: O
-        dataSource: REP-DEPT-CONTRACT-SUMMARY
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: dept-report
+      root: root-col
+      dataModel:
+        "/query": Contract
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, card-filter, tbl-result, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "部门合同统计分析" }
+        - id: card-filter
+          component: Card
+          label: 查询条件
+          children: { explicitList: [dtp-from, dtp-to, pick-department] }
+        - id: dtp-from
+          component: DateTimeInput
+          label: 签订日期从
+          value: { path: "/query/signDateFrom" }
+        - id: dtp-to
+          component: DateTimeInput
+          label: 到
+          value: { path: "/query/signDateTo" }
+        - id: pick-department
+          component: EntityPicker
+          label: 部门
+          value: { path: "/query/departmentId" }
+          dataBinding: Contract.departmentId
+          targetAggregate: Department
+          searchToolRef: contract_query_list
+        - id: tbl-result
+          component: DataTable
+          label: 统计结果
+          pagination: true
+          dataSourceRef: REP-DEPT-CONTRACT-SUMMARY
+          columns:
+            - { field: departmentName,   label: 部门 }
+            - { field: contractCount,    label: 合同数量 }
+            - { field: totalAmount,      label: 合同金额 }
+            - { field: invoicedAmount,   label: 开票金额 }
+            - { field: receivedAmount,   label: 收款金额 }
+            - { field: unreceivedAmount, label: 未收款 }
+            - { field: settledCount,     label: 结清数 }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-query, btn-export] }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: contract_query_department_summary }
+        - id: btn-export
+          component: Button
+          label: 导出
+          action: { event: contract_query_department_summary }
     actions:
-      - actionId: actQuery
+      - actionId: act-dept-query
         name: 查询
-        actionType: BUTTON
+        actionType: QUERY
+        event: contract_query_department_summary
+        toolRef: contract_query_department_summary
         behaviorRef: Contract_QueryDepartmentSummary
         permissionRef: [PERM-CONTRACT-QUERY-DEPT-SUMMARY, PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT]
 
-  # ══════════════════════════════════════════════════════════
-  # 已开票未收款分析（查询列表/报表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmUnreceivedReport
+  # ════════════════════════════════════════════════════════════════
+  # 已开票未收款分析
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-invoiced-unreceived-report
     name: 已开票未收款分析
-    screenType: QUERY_LIST
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 已开票未收款分析                                              │
-      │ 所属部门:[pslDepartment]  开票日期从:{dtpFrom}  到:{dtpTo}     │
-      │ [btnQuery 查询] [btnExport 导出]                               │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdResult                                                    │
-      │  合同编号 | 开票编号 | 开票金额 | 已收款 | 未收款 | 最近收款时间 │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: pslDepartment
-        type: POPUP_SELECT
-        label: 所属部门
-        io: I
-      - id: dtpFrom
-        type: DATEPICKER
-        label: 开票日期从
-        io: I
-      - id: dtpTo
-        type: DATEPICKER
-        label: 到
-        io: I
-      - id: grdResult
-        type: GRID
-        label: 分析结果
-        io: O
-        dataSource: REP-INVOICED-UNRECEIVED
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: invoiced-unreceived-report
+      root: root-col
+      dataModel:
+        "/query": Contract
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, card-filter, tbl-result, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "已开票未收款分析" }
+        - id: card-filter
+          component: Card
+          label: 查询条件
+          children: { explicitList: [pick-department, dtp-from, dtp-to] }
+        - id: pick-department
+          component: EntityPicker
+          label: 所属部门
+          value: { path: "/query/departmentId" }
+          dataBinding: Contract.departmentId
+          targetAggregate: Department
+          searchToolRef: contract_query_list
+        - id: dtp-from
+          component: DateTimeInput
+          label: 开票日期从
+          value: { path: "/query/invoiceDateFrom" }
+        - id: dtp-to
+          component: DateTimeInput
+          label: 到
+          value: { path: "/query/invoiceDateTo" }
+        - id: tbl-result
+          component: DataTable
+          label: 分析结果
+          pagination: true
+          dataSourceRef: REP-INVOICED-UNRECEIVED
+          columns:
+            - { field: contractNo,        label: 合同编号 }
+            - { field: invoiceNo,         label: 开票编号 }
+            - { field: invoiceAmount,     label: 开票金额 }
+            - { field: receivedAmount,    label: 已收款 }
+            - { field: unreceivedAmount,  label: 未收款 }
+            - { field: lastReceiptTime,   label: 最近收款时间 }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-query, btn-export] }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: contract_query_invoiced_unreceived }
+        - id: btn-export
+          component: Button
+          label: 导出
+          action: { event: contract_query_invoiced_unreceived }
     actions:
-      - actionId: actQuery
+      - actionId: act-unreceived-query
         name: 查询
-        actionType: BUTTON
+        actionType: QUERY
+        event: contract_query_invoiced_unreceived
+        toolRef: contract_query_invoiced_unreceived
         behaviorRef: Contract_QueryInvoicedUnreceived
         permissionRef: [PERM-CONTRACT-QUERY-UNRECEIVED, PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT]
 
-  # ══════════════════════════════════════════════════════════
-  # 产品信息维护（单表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmProductMaintain
+  # ════════════════════════════════════════════════════════════════
+  # 产品信息维护（列表维护）
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-product-maintain
     name: 产品信息维护
-    screenType: SINGLE_FORM
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 产品信息维护                                                  │
-      │ 产品编号:[txtNo]    产品名称:[txtName]                        │
-      │ 产品类型:(cboType)                                            │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdList                                                      │
-      │  编号 | 名称 | 类型 | 状态                                     │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      ├──────────────────────────────────────────────────────────────┤
-      │ [btnAdd 新增] [btnSave 保存] [btnDisable 停用] [btnCancel 取消] │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtNo
-        type: TEXTBOX
-        label: 产品编号
-        io: I
-        required: true
-        dataBinding: Product.productId
-      - id: txtName
-        type: TEXTBOX
-        label: 产品名称
-        io: I
-        required: true
-        dataBinding: Product.productName
-      - id: cboType
-        type: COMBO
-        label: 产品类型
-        io: I
-        required: true
-        dataBinding: Product.productType
-      - id: grdList
-        type: GRID
-        label: 产品列表
-        io: O
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: product-maintain
+      root: root-col
+      dataModel:
+        "/product": Product
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, row-toolbar, tbl-list, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "产品信息维护" }
+        - id: row-toolbar
+          component: Row
+          children: { explicitList: [txt-keyword, btn-query, btn-add] }
+        - id: txt-keyword
+          component: TextField
+          label: 关键词
+          value: { path: "/product/productName" }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: product_maintain }
+        - id: btn-add
+          component: Button
+          label: 新增
+          action: { event: product_maintain }
+        - id: tbl-list
+          component: DataTable
+          label: 产品列表
+          pagination: true
+          columns:
+            - { field: productId,    label: 编号 }
+            - { field: productName,  label: 名称 }
+            - { field: productType,  label: 类型 }
+            - { field: status,       label: 状态 }
+          rowActions:
+            - { actionId: act-product-save, label: 保存 }
+            - { actionId: act-product-disable, label: 停用, destructive: true }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-save] }
+        - id: btn-save
+          component: Button
+          label: 保存
+          action: { event: product_maintain }
     actions:
-      - actionId: actSave
+      - actionId: act-product-save
         name: 保存
-        actionType: BUTTON
+        actionType: EXECUTE
+        event: product_maintain
+        toolRef: product_maintain
         behaviorRef: Product_Maintain
         permissionRef: [PERM-PRODUCT-MAINTAIN]
 
-  # ══════════════════════════════════════════════════════════
-  # 客户信息维护（单表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmCustomerMaintain
+  # ════════════════════════════════════════════════════════════════
+  # 客户信息维护（列表维护）
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-customer-maintain
     name: 客户信息维护
-    screenType: SINGLE_FORM
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 客户信息维护                                                  │
-      │ 客户编号:[txtNo]    客户名称:[txtName]                        │
-      │ 客户类型:(cboType)                                            │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdList                                                      │
-      │  编号 | 名称 | 类型 | 状态                                     │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      ├──────────────────────────────────────────────────────────────┤
-      │ [btnAdd 新增] [btnSave 保存] [btnDisable 停用] [btnCancel 取消] │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtNo
-        type: TEXTBOX
-        label: 客户编号
-        io: I
-        required: true
-        dataBinding: Customer.customerId
-      - id: txtName
-        type: TEXTBOX
-        label: 客户名称
-        io: I
-        required: true
-        dataBinding: Customer.customerName
-      - id: cboType
-        type: COMBO
-        label: 客户类型
-        io: I
-        required: true
-        dataBinding: Customer.customerType
-      - id: grdList
-        type: GRID
-        label: 客户列表
-        io: O
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: customer-maintain
+      root: root-col
+      dataModel:
+        "/customer": Customer
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, row-toolbar, tbl-list, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "客户信息维护" }
+        - id: row-toolbar
+          component: Row
+          children: { explicitList: [txt-keyword, btn-query, btn-add] }
+        - id: txt-keyword
+          component: TextField
+          label: 关键词
+          value: { path: "/customer/customerName" }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: customer_maintain }
+        - id: btn-add
+          component: Button
+          label: 新增
+          action: { event: customer_maintain }
+        - id: tbl-list
+          component: DataTable
+          label: 客户列表
+          pagination: true
+          columns:
+            - { field: customerId,    label: 编号 }
+            - { field: customerName,  label: 名称 }
+            - { field: customerType,  label: 类型 }
+            - { field: status,        label: 状态 }
+          rowActions:
+            - { actionId: act-customer-save, label: 保存 }
+            - { actionId: act-customer-disable, label: 停用, destructive: true }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-save] }
+        - id: btn-save
+          component: Button
+          label: 保存
+          action: { event: customer_maintain }
     actions:
-      - actionId: actSave
+      - actionId: act-customer-save
         name: 保存
-        actionType: BUTTON
+        actionType: EXECUTE
+        event: customer_maintain
+        toolRef: customer_maintain
         behaviorRef: Customer_Maintain
         permissionRef: [PERM-CUSTOMER-MAINTAIN]
 
-  # ══════════════════════════════════════════════════════════
-  # 部门信息维护（单表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmDepartmentMaintain
+  # ════════════════════════════════════════════════════════════════
+  # 部门信息维护（列表维护）
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-department-maintain
     name: 部门信息维护
-    screenType: SINGLE_FORM
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 部门信息维护                                                  │
-      │ 部门编号:[txtNo]    部门名称:[txtName]                        │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdList                                                      │
-      │  编号 | 名称 | 状态                                           │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      ├──────────────────────────────────────────────────────────────┤
-      │ [btnAdd 新增] [btnSave 保存] [btnDisable 停用] [btnCancel 取消] │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtNo
-        type: TEXTBOX
-        label: 部门编号
-        io: I
-        required: true
-        dataBinding: Department.departmentId
-      - id: txtName
-        type: TEXTBOX
-        label: 部门名称
-        io: I
-        required: true
-        dataBinding: Department.departmentName
-      - id: grdList
-        type: GRID
-        label: 部门列表
-        io: O
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: department-maintain
+      root: root-col
+      dataModel:
+        "/department": Department
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, row-toolbar, tbl-list, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "部门信息维护" }
+        - id: row-toolbar
+          component: Row
+          children: { explicitList: [txt-keyword, btn-query, btn-add] }
+        - id: txt-keyword
+          component: TextField
+          label: 关键词
+          value: { path: "/department/departmentName" }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: department_maintain }
+        - id: btn-add
+          component: Button
+          label: 新增
+          action: { event: department_maintain }
+        - id: tbl-list
+          component: DataTable
+          label: 部门列表
+          pagination: true
+          columns:
+            - { field: departmentId,    label: 编号 }
+            - { field: departmentName,  label: 名称 }
+            - { field: status,          label: 状态 }
+          rowActions:
+            - { actionId: act-department-save, label: 保存 }
+            - { actionId: act-department-disable, label: 停用, destructive: true }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-save] }
+        - id: btn-save
+          component: Button
+          label: 保存
+          action: { event: department_maintain }
     actions:
-      - actionId: actSave
+      - actionId: act-department-save
         name: 保存
-        actionType: BUTTON
+        actionType: EXECUTE
+        event: department_maintain
+        toolRef: department_maintain
         behaviorRef: Department_Maintain
         permissionRef: [PERM-DEPARTMENT-MAINTAIN]
 
-  # ══════════════════════════════════════════════════════════
-  # 人员信息维护（单表）
-  # ══════════════════════════════════════════════════════════
-  - screenId: frmEmployeeMaintain
+  # ════════════════════════════════════════════════════════════════
+  # 人员信息维护（列表维护）
+  # ════════════════════════════════════════════════════════════════
+  - uiUnitId: ui-employee-maintain
     name: 人员信息维护
-    screenType: SINGLE_FORM
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 销售合同执行管理系统                               [btnLogout] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 人员信息维护                                                  │
-      │ 人员编号:[txtNo]    人员名称:[txtName]                        │
-      │ 所属部门:[pslDepartment]                                      │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdList                                                      │
-      │  编号 | 名称 | 部门 | 状态                                     │
-      │ 分页: [lblPaging 共N条] [btnPrev] [btnNext]                    │
-      ├──────────────────────────────────────────────────────────────┤
-      │ [btnAdd 新增] [btnSave 保存] [btnDisable 停用] [btnCancel 取消] │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtNo
-        type: TEXTBOX
-        label: 人员编号
-        io: I
-        required: true
-        dataBinding: Employee.employeeId
-      - id: txtName
-        type: TEXTBOX
-        label: 人员名称
-        io: I
-        required: true
-        dataBinding: Employee.employeeName
-      - id: pslDepartment
-        type: POPUP_SELECT
-        label: 所属部门
-        io: I
-        required: true
-        dataBinding: Employee.departmentId
-      - id: grdList
-        type: GRID
-        label: 人员列表
-        io: O
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: employee-maintain
+      root: root-col
+      dataModel:
+        "/employee": Employee
+      components:
+        - id: root-col
+          component: Column
+          children: { explicitList: [hd-title, row-toolbar, tbl-list, row-actions] }
+        - id: hd-title
+          component: Heading
+          value: { literalString: "人员信息维护" }
+        - id: row-toolbar
+          component: Row
+          children: { explicitList: [txt-keyword, btn-query, btn-add] }
+        - id: txt-keyword
+          component: TextField
+          label: 关键词
+          value: { path: "/employee/employeeName" }
+        - id: btn-query
+          component: Button
+          label: 查询
+          action: { event: employee_maintain }
+        - id: btn-add
+          component: Button
+          label: 新增
+          action: { event: employee_maintain }
+        - id: tbl-list
+          component: DataTable
+          label: 人员列表
+          pagination: true
+          columns:
+            - { field: employeeId,    label: 编号 }
+            - { field: employeeName,  label: 名称 }
+            - { field: departmentName, label: 部门 }
+            - { field: status,        label: 状态 }
+          rowActions:
+            - { actionId: act-employee-save, label: 保存 }
+            - { actionId: act-employee-disable, label: 停用, destructive: true }
+        - id: row-actions
+          component: Row
+          children: { explicitList: [btn-save] }
+        - id: btn-save
+          component: Button
+          label: 保存
+          action: { event: employee_maintain }
     actions:
-      - actionId: actSave
+      - actionId: act-employee-save
         name: 保存
-        actionType: BUTTON
+        actionType: EXECUTE
+        event: employee_maintain
+        toolRef: employee_maintain
         behaviorRef: Employee_Maintain
         permissionRef: [PERM-EMPLOYEE-MAINTAIN]

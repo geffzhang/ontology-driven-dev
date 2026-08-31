@@ -2,8 +2,9 @@
 **Ontology-Driven Software Modeling Framework（单体同步版）**
 
 > 完整建模规范 · 七大模型元文件 · 实施指南
-> 版本 9.0 | 2026年8月
+> 版本 9.1 | 2026年8月
 >
+> v9.1 在 v9.0 基础上重做 MU 模型以适配 AI 原生交互（详见 §8）。其余 M1/M2/M3/M5/M6/M7 语义不变。
 > v9.0 由 v6.0 裁剪而来，面向**单体同步部署的中小型业务系统**（如销售合同执行管理系统），
 > 以"同步流程编排"替代"事件驱动解耦"。裁剪与改造要点：
 >
@@ -14,8 +15,7 @@
 > 4. **M5 主体模型**：移除外部实体（ExternalEntity）与外部接口契约，仅保留内部角色与权限；
 > 5. **M6 流程模型**：移除事件触发、事件等待与场景调用活动，端到端协同流与审批流均为同步编排；
 > 6. **M7 查询报表模型**：参考 SQL 改为可选（物理表名在实现阶段确定）；
-> 7. **MU UI 模型**：全新定义为"总体界面 → 一级菜单 → 二级菜单 → UI 界面（ASCII）→ 操作功能点"的层级，
->    并新增 ASCII 界面布局规则、控件类型映射规则与"带审批功能必须含保存草稿/提交双按钮"规则。
+> 7. **MU UI 模型（v9.1 重做）**：由"菜单树 + ASCII 屏幕"改为面向 AI 原生交互的"应用 → 能力目录 → 工具契约 → 界面单元（`unitType` × `renderMode` 两个正交维度）→ 操作功能点"五层结构，并新增 A2UI Surface 与 MCP App 双形态、A2UI 组件目录映射（§8.3）、GENERATED 模式只读约束与"带审批功能必须含保存草稿/提交双动作点"规则。
 
 ---
 
@@ -62,16 +62,16 @@
 | **M5** | 主体模型 Actor Model | 定义系统参与者、角色、权限边界及行为执行授权关系 |
 | **M6** | 流程模型 Flow Model | 定义端到端业务协同流和审批流，描述角色任务、系统活动、网关、条件和子流程调用 |
 | **M7** | 查询统计与报表模型 Query & Report Model | 定义跨对象查询、统计分析和固定业务报表的来源、关联、条件、结果列、聚合及可选参考 SQL |
-| **MU** | UI 模型 UI Model | 定义总体界面、菜单层级、屏幕（ASCII 布局）、操作功能点及其与行为的调用关系 |
+| **MU** | UI 模型 UI Model | 定义应用、用户能力目录、M2 行为面向智能体的工具契约、A2UI Surface / MCP App 双形态界面单元及其组件结构、操作功能点；MU 仅作入口与追溯层，不重定义业务语义，也不承载渲染实现与传输协议 |
 
-> 说明：模型编号沿用历史体系（M1～M7、ME、M4、MU、MM、MI）。v9.0 中 **ME、M4、MM、MI 不再建模**，故七个模型编号为 M1、M2、M3、M5、M6、M7、MU，编号顺序不连续属有意保留，便于与历史版本及既有工具链对齐。
+> 说明：模型编号沿用历史体系（M1～M7、ME、M4、MU、MM、MI）。v9.0 起 **ME、M4、MM、MI 不再建模**，故七个模型编号为 M1、M2、M3、M5、M6、M7、MU，编号顺序不连续属有意保留，便于与历史版本及既有工具链对齐。v9.1 仅重做 MU 的内部结构（M1～M7 语义不变）。
 
 ## 1.3  模型间关系全景
 
 七个模型之间的依赖与引用关系如下：
 
 ```
-M6 流程模型      依赖   M1 对象模型 + M2 行为模型 + M3 规则模型 + M5 角色模型（+ MU 屏幕映射）
+M6 流程模型      依赖   M1 对象模型 + M2 行为模型 + M3 规则模型 + M5 角色模型
 M7 查询报表模型  依赖   M1 对象模型 + M2 查询行为（一对一绑定）
 M2 行为模型      依赖   M1 对象模型 + M3 规则模型 + M5 主体模型（+ syncTriggers 同步联动）
 M3 规则模型      引用   M1 对象模型（只读）
@@ -86,7 +86,7 @@ MU UI 模型      依赖   M1 对象模型 + M2 行为模型 + M6 流程模型 +
 3. M6 统一承载端到端业务协同流和审批流。人工活动只能通过 `roleRef` 引用 M5 中的 `roleId`，不得直接引用具体人员或填写自由文本参与人。
 4. M6 可以调用 M2 行为、M3 规则及其他 M6 子流程，但不得复制这些模型中的定义。
 5. M7 只与 M1、M2 发生直接关系。M7 定义查询内容，M2 定义执行该查询报表对象的原子行为，两者严格一对一；M7 不直接引用 M3、M5 或 M6。
-6. MU 是入口层/追溯层：只通过稳定 ID 引用 M1～M7，不重新定义这些模型的任何语义；MU 的操作功能点（actionPoint）是"一次用户操作 → 调用 M2 行为"的唯一界面入口。
+6. MU 是入口层/追溯层：只通过稳定 ID 引用 M1～M7，不重新定义这些模型的任何语义，也不承载 UI 渲染实现、传输协议或前后端代码；MU 的操作功能点是"一次用户动作 → 调用一个工具 → 执行一个 M2 行为"的唯一界面入口。
 7. **可追溯门禁**：M2 中 `triggerType=USER_ACTION` 的行为必须被至少一个 MU 操作功能点引用；MU 操作功能点引用的行为必须存在（反向可追溯、正向一致）。
 
 ## 1.4  同步联动的标准语义
@@ -214,9 +214,9 @@ MU UI 模型      依赖   M1 对象模型 + M2 行为模型 + M6 流程模型 +
 | dictionaryRef | DictionaryTypeRef | 当 type=DictionaryRef 时必填，包含 dictionaryId 和 typeCode |
 | refRules | AttributeRule[] | 可选；只依赖当前属性值、可在该属性内部完整定义的扩展规则 |
 
-`AggregateRootRef` 表示"存储另一个聚合根 ID 的标量属性"，而不是内嵌对象或数据库外键对象。该类型在代码生成时仍可映射为目标聚合根 ID 的实际标量类型，但在本体层必须通过 `targetAggregate` 显式声明目标。**在 MU UI 模型（§8）中，AggregateRootRef 属性显示为"跳选框"控件。**
+`AggregateRootRef` 表示"存储另一个聚合根 ID 的标量属性"，而不是内嵌对象或数据库外键对象。该类型在代码生成时仍可映射为目标聚合根 ID 的实际标量类型，但在本体层必须通过 `targetAggregate` 显式声明目标。**在 MU UI 模型（§8）中，AggregateRootRef 属性映射为 `EntityPicker` 组件（跳选框），必须声明 `targetAggregate` 与 `searchToolRef`。**
 
-`DictionaryRef` 表示属性值来自 M1 对象模型中的数据字典类型。业务数据保存字典项稳定的 `code`，界面显示 `label`。`DictionaryRef` 不得同时声明 `enumValues`。**在 MU UI 模型中，DictionaryRef 与 Enum 属性显示为"下拉列表框"控件。**
+`DictionaryRef` 表示属性值来自 M1 对象模型中的数据字典类型。业务数据保存字典项稳定的 `code`，界面显示 `label`。`DictionaryRef` 不得同时声明 `enumValues`。**在 MU UI 模型（§8）中，DictionaryRef 与 Enum 属性映射为 `Select` 组件（下拉列表框）。**
 
 #### 属性扩展规则（AttributeRule / refRules）
 
@@ -1483,480 +1483,365 @@ query_reports:
 8. `referenceSql` 可选；若填写，其参数绑定与结果映射必须与语义定义一致。
 
 ---
-
 # 第八章  MU UI 模型
 
-## 8.1  设计目标与边界
+## 8.1 设计目标与边界
 
-**设计目标**：MU 是七个模型的**入口层/追溯层**，定义"用户在哪里操作、点哪个功能点、驱动哪个行为"，把界面与业务模型用稳定 ID 连成完整调用链。本版 MU 采用**层级导航结构**，自上而下为：
+**设计目标**：MU 是七个模型的**入口层 / 追溯层**，定义"用户想完成什么、系统暴露哪些可调用能力、这些能力由什么界面承载、界面上的一次动作最终执行哪个行为"，把界面与业务模型用稳定 ID 连成完整调用链。
+
+本版 MU 面向 **AI 原生交互前提**：用户以自然语言表达意图，由能力目录路由到可调用能力，界面以声明式结构下发，而不是由人在固定菜单树中逐级点击查找功能。层级结构自上而下为：
 
 ```text
-总体界面（应用入口）
-  -> 一级菜单
-      -> 二级菜单（强制存在，一级菜单下至少一个二级菜单）
-          -> UI 界面（ASCII 布局 + 界面元素）
-              -> 操作功能点（对应 M2 行为）
+应用（Application）
+  -> 能力目录（Capability）—— 一个用户意图对应一条能力
+       -> 工具契约（Tool）—— M2 行为面向智能体与界面的唯一暴露面
+       -> 界面单元（UIUnit）—— 承载该能力的界面
+            -> 操作功能点（ActionPoint）—— 一次用户动作 -> 工具 -> M2 行为
 ```
+
+界面单元有两种形态：**A2UI Surface**（声明式组件结构，由扁平组件邻接表与数据模型构成）与 **MCP App**（以 `ui://` 资源标识的宿主界面声明）。两种形态与"界面在建模期确定还是运行期生成"是两个**正交维度**，分别由 `unitType` 与 `renderMode` 表达。
 
 **边界（强制）**：
 
-1. **只引用、不重定义**：MU 只通过稳定 ID 引用 M1/M2/M6/M7，不重新定义对象、行为、规则、流程或报表；
-2. **不承载视觉设计**：配色、字体、像素级布局、图标资源、皮肤属于设计系统/原型/主题，不在本模型；ASCII 布局只表达区域划分与控件排布；
-3. **不替代 M6**：端到端/审批流转归 M6；MU 只声明操作功能点与行为入口的对应关系；
-4. **不承载业务校验公式**：输入校验引用 M3 规则或 M1 属性约束；控件级格式（掩码、联动启用）可作为元素属性，仅限本元素内；
-5. 纯展示界面允许无操作功能点，但必须存在界面元素。
+1. **只引用、不重定义**：MU 只通过稳定 ID 引用 M1 / M2 / M6 / M7，不重新定义对象、行为、规则、流程或报表；
+2. **不承载视觉设计**：配色、字体、间距、图标、主题、终端适配由渲染端决定；MU 只声明组件类型、层级关系与数据绑定；
+3. **不替代 M6**：端到端协同流与审批流转归 M6；MU 只声明操作功能点与工具入口的对应关系；
+4. **不承载业务校验公式**：输入校验引用 M3 规则或 M1 属性约束；组件级格式（掩码、格式化、联动启用）可作为组件属性，仅限本组件内；
+5. **不定义传输与实现**：界面结构如何下发、宿主如何渲染、工具如何被调用，均属实现层，不在本模型；MU 只定义可被这些实现消费的建模语义；
+6. 纯展示的界面单元允许没有操作功能点，但必须有组件结构声明或宿主界面声明。
 
-## 8.2  模型元素规范
+## 8.2 模型元素规范
 
-### 8.2.1  应用（Application）
+### 8.2.1 应用（Application）
 
 | 属性名 | 类型 | 说明 |
 |--------|------|------|
 | name | String | 系统名称（中文） |
-| menus | Menu[] | 一级菜单集合 |
+| uiProtocols.a2ui.version | String | 声明式界面协议版本，固定 `v0.9` |
+| uiProtocols.a2ui.catalogRef | String | 组件目录标识，默认 `ontology-basic/v1`（见 §8.3.1） |
+| uiProtocols.mcpApps.version | String | 宿主界面规范版本，固定 `SEP-1865` |
 
-### 8.2.2  菜单（Menu）
+### 8.2.2 能力（Capability）
+
+能力是 MU 的入口单元，代表**一个用户意图**。能力目录取代了历史版本的菜单树：能力目录是**扁平**的，不存在一级/二级层级；如需分组展示，由宿主按权限或业务域自行归类，不在本模型内表达。
 
 | 属性名 | 类型 | 说明 |
 |--------|------|------|
-| menuId | String | 菜单唯一标识 |
-| name | String | 菜单名称 |
-| children | Menu[] | 二级菜单集合（**强制至少一个**） |
-| screenRef | ScreenRef | 二级菜单关联的屏幕 screenId（一级菜单不直接关联屏幕） |
+| capabilityId | String | 能力唯一标识（kebab-case） |
+| name | String | 能力名称（中文） |
+| intent | String | 语义描述：这条能力让用户完成什么 |
+| utterances | String[] | 自然语言触发样例，**至少 1 条**，建议 2-3 条，覆盖正式说法与口语说法 |
+| toolRef | ToolRef | 可选；无需界面即可直接执行时，指向的工具 |
+| uiUnitRef | UIUnitRef | 可选；承载该能力的界面单元 |
+| permissionRef | PermissionRef[] | 可选；控制能力可见性的 M5 权限 |
 
 约束：
 
-1. 菜单层级固定为**两级**：一级菜单 → 二级菜单；
-2. 一级菜单必须包含至少一个二级菜单，即使业务上仅有一个子项；
-3. 只有二级菜单才关联具体屏幕（`screenRef`），一级菜单仅作分组；
-4. 二级菜单与屏幕一对一（一个二级菜单对应一个屏幕）。
+1. `toolRef` 与 `uiUnitRef` **至少存在其一**；两者都存在时，表示该能力既可直接执行也可进入界面；
+2. `utterances` 不得为空数组，且不得与其他能力的样例语义重复到无法区分；
+3. 能力目录必须覆盖全部 `triggerType=USER_ACTION` 行为的可达性（见 §8.7 门禁第 5 条）。
 
-### 8.2.3  屏幕（Screen）
+### 8.2.3 工具契约（Tool）
 
-| 属性名 | 类型 | 说明 |
-|--------|------|------|
-| screenId | String | 屏幕唯一标识（建议与实现控件名一致，如 `frmXxx`） |
-| name | String | 屏幕业务名称（中文） |
-| screenType | Enum | `SINGLE_FORM`（单表维护/单条录入）/ `LIST_MAINTENANCE`（列表维护）/ `MASTER_DETAIL_FORM`（主从表维护）/ `QUERY_LIST`（查询列表） |
-| layout | String | ASCII 界面布局图（等宽字符），遵循 §8.4 布局规则 |
-| elements | Element[] | 屏幕元素集合 |
-| actions | ActionPoint[] | 操作功能点集合 |
+工具契约是 M2 行为面向智能体与界面的**唯一暴露面**，与 M2 中 `triggerType=USER_ACTION` 的行为**严格 1:1**。
 
-### 8.2.4  界面元素（Element）
+`triggerType=SYSTEM` 的行为（跨对象联动、系统触发）**不暴露为工具**——它们由上游行为的 `syncTriggers` 在同一事务边界内自动触发，不是用户或智能体可直接调用的能力。
 
 | 属性名 | 类型 | 说明 |
 |--------|------|------|
-| id | String | 元素标识（控件名），屏幕内唯一 |
-| type | Enum | 控件类型，见 §8.3 控件类型映射 |
-| label | String | 显示文案 |
-| io | Enum | I（输入）/ O（输出）/ I_O（输入输出）；空表示纯展示 |
-| required | Boolean | 是否必填（与 M1 属性 `required` 对齐） |
-| dataBinding | FieldPath | 绑定的 M1 聚合属性路径，如 `Contract.contractName` |
-| dataSource | QueryReportRef | 列表/下拉型控件的数据来源（引用 M7 对象） |
-| refRules | UIElementRule[] | 可选；控件级规则（掩码、格式、联动启用），仅限本元素内 |
+| toolName | String | 工具名（snake_case，全局唯一） |
+| behaviorRef | BehaviorRef | 对应的 M2 行为 |
+| title | String | 人类可读标题（中文） |
+| description | String | 供智能体判断何时调用该工具的语义描述 |
+| inputSchema.objectRef | ObjectRef | 输入所属的 M1 聚合 |
+| inputSchema.fields | FieldPath[] | 输入字段，类型与必填性由 M1 属性派生，不在此重复定义 |
+| outputSchema.objectRef | ObjectRef \| QueryReportRef | 输出所属的 M1 聚合或 M7 报表对象 |
+| outputSchema.fields | FieldPath[] | 输出字段 |
+| annotations.readOnlyHint | Boolean | 是否只读；M2 中的查询行为恒为 `true` |
+| annotations.destructiveHint | Boolean | 是否具有作废、撤销或删除语义 |
+| permissionRef | PermissionRef[] | 可选；执行该工具所需的 M5 权限 |
 
-### 8.2.5  操作功能点（ActionPoint）
+### 8.2.4 界面单元（UIUnit）
 
-操作功能点是界面与行为模型的衔接点，对应"界面上的一个按钮/动作 → 调用一个 M2 行为"。
+界面单元取代了历史版本的"屏幕（Screen）"。原来的四选一 `screenType` 由两个正交维度取代。
+
+| 属性名 | 类型 | 说明 |
+|--------|------|------|
+| uiUnitId | String | 界面单元唯一标识（kebab-case） |
+| name | String | 界面业务名称（中文） |
+| unitType | Enum | `A2UI_SURFACE`（声明式组件结构）/ `MCP_APP`（宿主界面声明） |
+| renderMode | Enum | `STATIC`（建模期确定结构）/ `GENERATED`（运行期按契约生成） |
+| surface | Surface | `unitType=A2UI_SURFACE` 且 `renderMode=STATIC` 时**必填** |
+| generationContract | GenerationContract | `renderMode=GENERATED` 时**必填** |
+| mcpApp | McpApp | `unitType=MCP_APP` 时**必填** |
+| actions | ActionPoint[] | 操作功能点集合；`renderMode=GENERATED` 时**不得声明** |
+
+约束：
+
+1. 事务型界面单元（涉及创建、修改、审批、作废等写操作）必须为 `renderMode=STATIC`；
+2. `renderMode=GENERATED` 仅可用于只读探索分析类界面；
+3. `unitType=MCP_APP` 适用于需要自带前端实现的重界面（复杂可视化看板、跨方对账等），其余场景一律使用 `A2UI_SURFACE`。
+
+### 8.2.5 Surface（声明式界面结构）
+
+Surface 采用**扁平组件邻接表**：组件不嵌套，而是通过 ID 引用子组件。该结构便于按 ID 定位与增量更新单个组件，也便于逐段生成。
+
+| 属性名 | 类型 | 说明 |
+|--------|------|------|
+| surfaceId | String | Surface 标识 |
+| root | ComponentId | 根组件 ID |
+| dataModel | Map | 数据模型路径 -> M1 绑定，如 `"/contract": Contract` |
+| components | Component[] | 扁平组件列表 |
+
+**组件（Component）**：
+
+| 属性名 | 类型 | 说明 |
+|--------|------|------|
+| id | String | 组件 ID，Surface 内唯一；必须为描述性 kebab-case 名称（`txt-contract-no`），禁止 `c1` 这类无语义命名 |
+| component | Enum | 组件类型，取自 `catalogRef` 声明的目录（见 §8.3.1） |
+| label | String | 可选；显示文案 |
+| value | `{ literalString }` \| `{ path }` | 可选；字面量值，或指向数据模型路径的绑定 |
+| required | Boolean | 可选；是否必填，与 M1 属性 `required` 对齐 |
+| dataBinding | FieldPath | 可选；绑定的 M1 聚合属性路径，如 `Contract.contractNo` |
+| children | `{ explicitList }` \| `{ template }` | 可选；静态子组件 ID 列表，或按数据数组逐项生成的模板 |
+| action | `{ event }` | 可选；触发的动作事件名，必须匹配本单元某个操作功能点的 `event` |
+| refRules | UIComponentRule[] | 可选；组件级规则（掩码、格式化、联动启用），仅限本组件内 |
+
+除上表通用属性外，各组件可有自身特有属性（如 `EntityPicker.targetAggregate`、`DataTable.columns`），由 §8.3.1 的组件目录定义。
+
+### 8.2.6 生成契约（GenerationContract）
+
+`renderMode=GENERATED` 时，MU 不声明组件结构，只声明生成时必须遵守的约束。
+
+| 属性名 | 类型 | 说明 |
+|--------|------|------|
+| intent | String | 界面意图 |
+| dataSources | QueryReportRef[] | 可用数据来源，引用 M7 报表对象 |
+| allowedComponents | ComponentType[] | 允许使用的组件白名单 |
+| allowedTools | ToolRef[] | 允许调用的工具，**必须全部** `readOnlyHint=true` |
+| requiredActions | ActionId[] | 可选；必须提供的动作 |
+
+### 8.2.7 宿主界面声明（McpApp）
+
+| 属性名 | 类型 | 说明 |
+|--------|------|------|
+| resourceUri | String | 界面资源标识，必须以 `ui://` 开头，如 `ui://contract/execution-report` |
+| mimeType | String | 固定 `text/html;profile=mcp-app` |
+| templateOfTool | ToolRef | 该界面作为哪个工具结果的输出模板 |
+| allowedTools | ToolRef[] | 该界面可反向调用的工具集合 |
+
+> MU 只声明上述标识与引用关系，不定义界面资源的具体实现内容。
+
+### 8.2.8 操作功能点（ActionPoint）
+
+操作功能点是界面与行为模型的衔接点，对应"界面上的一次用户动作 -> 调用一个工具 -> 执行一个 M2 行为"。
 
 | 属性名 | 类型 | 说明 |
 |--------|------|------|
 | actionId | String | 功能点唯一标识 |
-| name | String | 功能点名称（按钮文案） |
-| behaviorRef | BehaviorRef | 对应调用的 M2 行为 |
-| actionType | Enum | `BUTTON`（普通按钮）/ `SUBMIT`（提交）/ `DRAFT`（保存草稿）/ `APPROVE`（审批通过）/ `REJECT`（审批驳回）/ `RETURN`（审批退回） |
+| name | String | 功能点名称（动作文案） |
+| actionType | Enum | `EXECUTE` / `SUBMIT` / `DRAFT` / `APPROVE` / `REJECT` / `RETURN` / `QUERY` / `EXPORT` |
+| event | String | 动作事件名，与组件 `action.event` 对应 |
+| toolRef | ToolRef | 触发调用的工具 |
+| behaviorRef | BehaviorRef | 最终执行的 M2 行为，**必须与 `toolRef` 所指工具的 `behaviorRef` 完全一致** |
 | permissionRef | PermissionRef[] | 可选；控制功能点可用性的 M5 权限 |
 
-### 8.2.6  控件类型（Element.type）枚举
+## 8.3 M1 属性类型到组件映射规则（强制）
 
-| type | 说明 |
-|------|------|
-| TEXTBOX | 文本框 |
-| TEXTAREA | 多行文本域（备注类字段） |
-| COMBO | 下拉列表框（枚举 / 数据字典） |
-| DATEPICKER | 日期控件 |
-| POPUP_SELECT | 跳选框（对象引用 AggregateRootRef：左边文本框 + 右边按钮弹出对话框选择） |
-| NUMBER | 数字框 |
-| CHECKBOX | 复选框 |
-| BUTTON | 按钮 |
-| GRID | 表格（明细/查询结果） |
-| LABEL | 标签 |
+对象模型属性类型到界面组件类型的固定映射：
 
-## 8.3  控件类型映射规则（强制）
+| M1 属性类型 | 组件类型 | 说明 |
+|-------------|----------|------|
+| Date / DateTime | `DateTimeInput` | 按类型开关日期与时间部分 |
+| Enum | `Select` | 选项来自 `enumValues` |
+| DictionaryRef | `Select` | 选项来自数据字典项（`label` 显示、`code` 存储） |
+| AggregateRootRef | `EntityPicker` | 跳选目标聚合；**必须声明 `targetAggregate`** |
+| String（长文本 / 备注） | `TextArea` | |
+| Boolean | `Checkbox` | |
+| Integer / Decimal / Money | `NumberInput` | |
+| 其他 String | `TextField` | |
+| 明细集合 / 查询结果 | `DataTable` | 配合 `children.template` 绑定数据模型中的数组路径 |
+| 对象状态机当前状态 | `StatusBadge` | 声明 `stateMachineRef` 指向 M1 状态机 |
 
-对象模型属性类型到界面控件类型的固定映射：
+### 8.3.1 ontology-basic 组件目录
 
-| M1 属性类型 | 界面控件类型 | 说明 |
-|-------------|--------------|------|
-| Date / DateTime | DATEPICKER | 日期控件 |
-| Enum | COMBO | 下拉列表框，选项来自 `enumValues` |
-| DictionaryRef | COMBO | 下拉列表框，选项来自数据字典项（label 显示、code 存储） |
-| AggregateRootRef | POPUP_SELECT | 跳选框：左边文本框（显示目标对象名称），右边小按钮弹出对话框选择 |
-| String（长文本/备注） | TEXTAREA | 多行文本域 |
-| Boolean | CHECKBOX | 复选框 |
-| 其他标量（String/Integer/Decimal/Money） | TEXTBOX / NUMBER | 文本框或数字框 |
+组件目录是允许使用的组件白名单。本规范默认目录为 `ontology-basic/v1`。
 
-## 8.4  ASCII 界面布局规则（强制）
+**通用组件**：`Column`、`Row`、`Card`、`Heading`、`Text`、`TextField`、`NumberInput`、`TextArea`、`Select`、`DateTimeInput`、`Checkbox`、`Button`。
 
-**布局总则（强制）**：表单属性标签一律**右对齐**（文字末尾对齐）、控件一律**左对齐**，标签列采用固定宽度，形成规整的「标签列 + 控件列」表格化布局。
+**本体语义组件**（承载 M1 / M7 语义，通用目录无等价物，故由本规范定义）：
 
-ASCII 布局图是屏幕结构化布局的轻量表达，描述"控件位于哪个区域、如何排布"，**不描述视觉样式**。绘制约定：
+| 组件 | 用途 | 关键属性 |
+|------|------|----------|
+| `EntityPicker` | `AggregateRootRef` 属性的跳选 | `targetAggregate`（目标聚合）、`searchToolRef`（该聚合的查询工具） |
+| `DataTable` | 明细集合维护与查询结果展示 | `columns[{field,label}]`、`pagination`、`inlineEdit`、`rowActions[{actionId}]` |
+| `StatusBadge` | 对象状态机当前状态展示 | `value{path}`、`stateMachineRef` |
+| `Chart` | M7 报表的可视化呈现 | `dataSourceRef`（M7 报表对象）、`chartType`、`dimensions`、`measures` |
 
-- 等宽字符绘制，每行建议不超过 100 字符；
-- 边框使用 `┌ ─ ┐ └ ┘ │ ├ ┤` 绘制区域边界；
-- 控件标注：`[elementId]` 文本框/按钮、`(cboId)` 下拉框、`{dtpId}` 日期、`[pslId…]` 跳选框、`@grdId` 表格；
-- 布局中出现的每个 elementId 必须存在于该屏幕 `elements`，且 `io`/`required` 与 `elements` 对齐。
+> 项目可声明自有组件目录以匹配既有设计系统，但**必须提供上述四个本体语义组件的等价语义**，否则 M1 的 `AggregateRootRef`、状态机与 M7 报表语义在界面层断链。
 
-### 8.4.1  单表维护界面（SINGLE_FORM）
+## 8.4 界面单元组织模式（强制）
 
-- **一行布置两个属性控件**，属性标签右对齐、控件左对齐，左右布局（表格化）；
-- 遇到备注等长文本字段，**可一行只布置一个控件**（占满整行）。
+`renderMode=STATIC` 的 A2UI 界面单元必须按以下四种组件组织模式之一构造：
 
-> 说明：`SINGLE_FORM` 用于**单条记录的录入/维护**（页面直接展示一个表单，如"收款录入"）。主数据、数据字典、简单实体等需要"列表 + 增删改"的维护界面应使用 `LIST_MAINTENANCE`（列表维护界面，见 §8.4.4），不得用 `SINGLE_FORM` 在页面顶部堆表单 + 底部列表的方式实现。
+| 模式 | 适用场景 | 组件结构 |
+|------|----------|----------|
+| 单对象录入 | 单条记录的录入 / 维护 | `Column[ Heading, Card(字段组), Row(动作区) ]` |
+| 主从维护 | 聚合根 + 明细集合 | `Column[ Card(主对象字段), DataTable(明细，`children.template` 绑定数组，`inlineEdit=true`，`rowActions` 含删除), Row(动作区) ]` |
+| 查询列表 | M7 查询报表 | `Column[ Card(查询条件), DataTable(`pagination=true`), Row(动作区) ]` |
+| 列表维护 | 主数据 / 数据字典 / 简单实体 | `Column[ Row(工具栏：关键词 + 查询 + 新增), DataTable(`rowActions` 含编辑、删除) ]`；新增与编辑由**第二个 Surface** 承载，主 Surface 不内联表单 |
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│ 合同维护                                            [btnExit] │
-├──────────────────────────────────────────────────────────────┤
-│ 合同编号: [txtContractNo]        合同名称: [txtContractName]  │
-│ 合同类型: (cboContractType)      签订时间: {dtpSignDate}      │
-│ 所属产品: [pslProduct]           所属客户: [pslCustomer]      │
-│ 所属部门: [pslDepartment]        责任人:   [pslOwner]         │
-│ 合同总金额:[txtTotalAmount]      合同税率: [txtTaxRate]       │
-│ 备注: [txtaRemark]                                            │
-├──────────────────────────────────────────────────────────────┤
-│ [btnSave] [btnSubmit] [btnCancel]                             │
-└──────────────────────────────────────────────────────────────┘
-```
+**明确不由 MU 规定的内容**：字段一行排布几个、标签与控件的对齐方式、间距与响应式断点。这些由渲染端与组件目录实现决定，不属于本体语义。MU 只声明字段归属哪个分组容器以及在容器内的顺序。
 
-### 8.4.2  主从表维护界面（MASTER_DETAIL_FORM）
+## 8.5 审批双动作规则（强制）
 
-- **主表一行布置三个属性控件**，属性标签右对齐、控件左对齐，左右布局（表格化）；
-- **从表在下方**，以表格化布局呈现；从表数据的**新增、维护、删除直接在表格内动态完成**（表格内编辑行、行内删除按钮）。
+如果一个功能本身带审批流，其"创建 / 录入"界面单元**必须提供两个独立的操作功能点**：
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│ 合同录入（主从表）                                [btnExit]   │
-├──────────────────────────────────────────────────────────────┤
-│ 合同编号:[txtContractNo]  合同名称:[txtContractName]  合同类型:(cboContractType) │
-│ 所属产品:[pslProduct]     所属客户:[pslCustomer]      签订时间:{dtpSignDate}     │
-│ 所属部门:[pslDepartment]  责任人:[pslOwner]           合同总金额:[txtTotalAmount]│
-├──────────────────────────────────────────────────────────────┤
-│ 付款阶段（从表，表格内动态维护）                              │
-│ @grdPaymentStage                                              │
-│  阶段编号 | 阶段名称 | 付款比例 | [删除]                       │
-│  [btnAddRow]                                                  │
-├──────────────────────────────────────────────────────────────┤
-│ [btnSave] [btnSubmit] [btnCancel]                             │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### 8.4.3  查询列表界面（QUERY_LIST）
-
-- **查询条件放上面**，一行布置三个属性控件，属性标签右对齐、控件左对齐，左右布局（表格化）；
-- **查询结果表格放在下面**，表格化布局，**支持分页**。
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│ 合同信息查询                                              [btnExit] │
-├──────────────────────────────────────────────────────────────┤
-│ 合同编号:[txtContractNo]  合同名称:[txtContractName]  合同类型:(cboContractType) │
-│ 所属部门:[pslDepartment]  签订时间从:{dtpStart}  到:{dtpEnd}     │
-│ [btnQuery] [btnReset]                                         │
-├──────────────────────────────────────────────────────────────┤
-│ @grdResult                                                    │
-│  合同编号 | 合同名称 | 合同类型 | 合同金额 | 责任人 | 客户 | 部门 │
-│ [分页: 共N条 | 第1/20页 | 上一页 | 下一页]                     │
-└──────────────────────────────────────────────────────────────┘
-```
-
-### 8.4.4  列表维护界面（LIST_MAINTENANCE）
-
-用于**主数据、数据字典、简单实体**的增删改查维护（如产品、客户、部门、人员维护）。布局规则（强制）：
-
-- **页面上不直接展示表单**：界面只包含工具栏 + 列表表格；
-- 工具栏包含「新增」按钮（及可选的关键词查询/「查询」按钮）；
-- 列表表格的每一行提供「编辑」「删除」行内操作；
-- **新增**点击「新增」按钮后**弹出对话框（Modal）**，在弹窗内填写并保存；
-- **修改**点击某行「编辑」后**弹出同一对话框**（预填该行数据），在弹窗内修改并保存；
-- 弹窗内的表单为单表布局：一行 2 个属性控件，标签右对齐、控件左对齐；编号等系统自动生成字段在弹窗内只读展示、不占输入；
-- 保存成功后关闭弹窗并刷新列表；取消则关闭弹窗。
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│ 产品信息维护                                          [btnExit] │
-├──────────────────────────────────────────────────────────────┤
-│ 关键词:[txtKeyword]                          [btnQuery] [btnAdd] │
-├──────────────────────────────────────────────────────────────┤
-│ @grdList                                                      │
-│  编号 | 名称 | 类型 | 状态 | [编辑] [删除]                       │
-│ [分页: 共N条 | 上一页 | 下一页]                                 │
-└──────────────────────────────────────────────────────────────┘
-
-（点击「新增」/「编辑」弹出对话框，页面本身不展示以下表单）
-┌──────────────────────────────┐
-│ 新增产品 / 编辑产品            │
-│ 编号:[txtNo(只读)]            │
-│ 名称:[txtName]   类型:(cboType)│
-│              [btnCancel] [btnSave] │
-└──────────────────────────────┘
-```
-
-## 8.5  审批功能的双按钮规则（强制）
-
-如果一个功能（屏幕）本身带审批流，那么该屏幕在"创建/录入"时**必须提供两个独立的按钮功能点**：
-
-1. **保存草稿**（`actionType=DRAFT`）：仅保存数据，将对象置于"草稿"状态，不触发审批；对应 M2 的 `Contract_SaveAsDraft` 行为；
-2. **提交**（`actionType=SUBMIT`）：保存数据并提交进入审批流，对应 M2 的 `Contract_Submit` 行为（该行为将对象置于"待审批"状态，并作为审批流的启动入口）。
+1. **保存草稿**（`actionType=DRAFT`）：仅保存数据，将对象置于"草稿"状态，不触发审批；对应 M2 的 `Xxx_SaveAsDraft` 行为；
+2. **提交**（`actionType=SUBMIT`）：保存数据并提交进入审批流；对应 M2 的 `Xxx_Submit` 行为（该行为将对象置于"待审批"状态，并作为审批流的启动入口）。
 
 约束：
 
-- 两个按钮必须是**独立的功能点**，分别对应独立的 M2 行为，不得合并为一个"保存"按钮；
+- 两个功能点必须**独立**，分别绑定独立的工具契约与独立的 M2 行为，不得合并为单个"保存"动作；
 - 提交行为在 M6 审批流中以 `trigger.behaviorRef` 引用，作为审批流启动入口；
-- 无审批流的功能不需要"保存草稿/提交"双按钮，只需"保存"按钮。
+- 带审批流的界面单元必须为 `renderMode=STATIC`；
+- 无审批流的功能只需一个 `EXECUTE` 动作。
 
-## 8.6  YAML 元文件模板
+## 8.6 YAML 元文件模板
 
 ```yaml
 # MU UI 模型元文件 - mu-ui-model.yaml
 model_type: UI
-version: "1.0"
+version: "2.0"
 domain: "销售合同执行管理"
 
 application:
   name: 销售合同执行管理系统
-  menus:
-    - menuId: menu-contract
-      name: 合同管理
-      children:
-        - menuId: menu-contract-maintain
-          name: 合同维护
-          screenRef: frmContractMaintain
-        - menuId: menu-contract-query
-          name: 合同查询
-          screenRef: frmContractQuery
-    - menuId: menu-invoice
-      name: 开票管理
-      children:
-        - menuId: menu-invoice-maintain
-          name: 开票录入
-          screenRef: frmInvoiceMaintain
-        - menuId: menu-invoice-query
-          name: 开票查询
-          screenRef: frmInvoiceQuery
-    - menuId: menu-receipt
-      name: 收款管理
-      children:
-        - menuId: menu-receipt-maintain
-          name: 收款录入
-          screenRef: frmReceiptMaintain
-    - menuId: menu-report
-      name: 报表中心
-      children:
-        - menuId: menu-report-execution
-          name: 合同执行情况分析
-          screenRef: frmContractExecutionReport
-        - menuId: menu-report-dept
-          name: 部门合同统计报表
-          screenRef: frmDeptContractReport
-    - menuId: menu-masterdata
-      name: 基础数据
-      children:
-        - menuId: menu-masterdata-product
-          name: 产品信息维护
-          screenRef: frmProductMaintain
-        - menuId: menu-masterdata-customer
-          name: 客户信息维护
-          screenRef: frmCustomerMaintain
-        - menuId: menu-masterdata-department
-          name: 部门信息维护
-          screenRef: frmDepartmentMaintain
-        - menuId: menu-masterdata-employee
-          name: 人员信息维护
-          screenRef: frmEmployeeMaintain
+  uiProtocols:
+    a2ui:    { version: "v0.9", catalogRef: "ontology-basic/v1" }
+    mcpApps: { version: "SEP-1865" }
 
-screens:
-  - screenId: frmContractMaintain
+# ── 能力目录：一个用户意图一条，扁平无层级 ──
+capabilities:
+  - capabilityId: cap-contract-create
+    name: 录入销售合同
+    intent: 创建一份销售合同，保存草稿或提交进入审批流
+    utterances:
+      - "新建一个合同"
+      - "帮我录入东方公司的销售合同"
+    uiUnitRef: ui-contract-maintain
+    permissionRef: [perm-contract-create]
+
+  - capabilityId: cap-contract-detail
+    name: 查看合同详情
+    intent: 按合同编号或名称直接返回单份合同的完整信息
+    utterances:
+      - "查一下 HT-2026-001 的详情"
+      - "看看那份东方公司的合同"
+    toolRef: contract_query_detail
+    permissionRef: [perm-contract-view]
+
+# ── 工具契约：与 USER_ACTION 行为严格 1:1 ──
+tools:
+  - toolName: contract_save_as_draft
+    behaviorRef: Contract_SaveAsDraft
+    title: 保存合同草稿
+    description: 保存合同数据并置为草稿状态，不触发审批
+    inputSchema:  { objectRef: Contract, fields: [contractNo, contractName, contractType, customerId, paymentStages] }
+    outputSchema: { objectRef: Contract, fields: [contractId, status] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [perm-contract-create]
+
+  - toolName: contract_submit
+    behaviorRef: Contract_Submit
+    title: 提交合同
+    description: 保存合同数据并提交进入审批流
+    inputSchema:  { objectRef: Contract, fields: [contractNo, contractName, contractType, customerId, paymentStages] }
+    outputSchema: { objectRef: Contract, fields: [contractId, status] }
+    annotations:  { readOnlyHint: false, destructiveHint: false }
+    permissionRef: [perm-contract-create]
+
+# ── 界面单元：unitType × renderMode 两个正交维度 ──
+uiUnits:
+  # 形态一：声明式组件结构 + 建模期确定
+  - uiUnitId: ui-contract-maintain
     name: 合同录入
-    screenType: MASTER_DETAIL_FORM
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 合同录入（主从表）                                [btnExit]   │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 合同编号:[txtContractNo]  合同名称:[txtContractName]  合同类型:(cboContractType) │
-      │ 所属产品:[pslProduct]     所属客户:[pslCustomer]      签订时间:{dtpSignDate}     │
-      │ 所属部门:[pslDepartment]  责任人:[pslOwner]           合同总金额:[txtTotalAmount]│
-      ├──────────────────────────────────────────────────────────────┤
-      │ 付款阶段（从表，表格内动态维护）                              │
-      │ @grdPaymentStage                                              │
-      │  阶段编号 | 阶段名称 | 付款比例 | [删除]                       │
-      │  [btnAddRow]                                                  │
-      ├──────────────────────────────────────────────────────────────┤
-      │ [btnSave] [btnSubmit] [btnCancel]                             │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtContractNo
-        type: TEXTBOX
-        label: 合同编号
-        io: I
-        required: true
-        dataBinding: Contract.contractNo
-      - id: txtContractName
-        type: TEXTBOX
-        label: 合同名称
-        io: I
-        required: true
-        dataBinding: Contract.contractName
-      - id: cboContractType
-        type: COMBO
-        label: 合同类型
-        io: I
-        required: true
-        dataBinding: Contract.contractType
-      - id: pslProduct
-        type: POPUP_SELECT
-        label: 所属产品
-        io: I
-        required: true
-        dataBinding: Contract.productId
-      - id: pslCustomer
-        type: POPUP_SELECT
-        label: 所属客户
-        io: I
-        required: true
-        dataBinding: Contract.customerId
-      - id: dtpSignDate
-        type: DATEPICKER
-        label: 签订时间
-        io: I
-        required: true
-        dataBinding: Contract.signDate
-      - id: pslDepartment
-        type: POPUP_SELECT
-        label: 所属部门
-        io: I
-        required: true
-        dataBinding: Contract.departmentId
-      - id: pslOwner
-        type: POPUP_SELECT
-        label: 责任人
-        io: I
-        required: true
-        dataBinding: Contract.ownerId
-      - id: txtTotalAmount
-        type: NUMBER
-        label: 合同总金额
-        io: I
-        required: true
-        dataBinding: Contract.totalAmount
-      - id: grdPaymentStage
-        type: GRID
-        label: 付款阶段
-        io: I_O
-        dataBinding: Contract.stages
-      - id: btnAddRow
-        type: BUTTON
-        label: 新增行
-      - id: btnExit
-        type: BUTTON
-        label: 退出
-
+    unitType: A2UI_SURFACE
+    renderMode: STATIC
+    surface:
+      surfaceId: contract-maintain
+      root: root-col
+      dataModel:
+        "/contract": Contract
+        "/contract/stages": Contract.paymentStages
+      components:
+        - { id: root-col, component: Column,
+            children: { explicitList: [hd-title, card-main, tbl-stage, row-actions] } }
+        - { id: hd-title, component: Heading, value: { literalString: "合同录入" } }
+        - { id: card-main, component: Card,
+            children: { explicitList: [txt-contract-no, txt-contract-name, sel-contract-type, pick-customer] } }
+        - { id: txt-contract-no, component: TextField, label: 合同编号, required: true,
+            value: { path: "/contract/contractNo" }, dataBinding: Contract.contractNo }
+        - { id: txt-contract-name, component: TextField, label: 合同名称, required: true,
+            value: { path: "/contract/contractName" }, dataBinding: Contract.contractName }
+        - { id: sel-contract-type, component: Select, label: 合同类型, required: true,
+            value: { path: "/contract/contractType" }, dataBinding: Contract.contractType }
+        - { id: pick-customer, component: EntityPicker, label: 所属客户, required: true,
+            value: { path: "/contract/customerId" }, dataBinding: Contract.customerId,
+            targetAggregate: Customer, searchToolRef: customer_query }
+        - { id: tbl-stage, component: DataTable, label: 付款阶段,
+            children: { template: { dataPath: "/contract/stages" } },
+            inlineEdit: true,
+            columns: [{ field: stageNo, label: 阶段编号 }, { field: ratio, label: 付款比例 }] }
+        - { id: row-actions, component: Row,
+            children: { explicitList: [btn-draft, btn-submit] } }
+        - { id: btn-draft,  component: Button, label: 保存草稿, action: { event: contract_save_draft } }
+        - { id: btn-submit, component: Button, label: 提交,     action: { event: contract_submit } }
     actions:
-      - actionId: actSaveDraft
-        name: 保存草稿
-        actionType: DRAFT
-        behaviorRef: Contract_SaveAsDraft
-        permissionRef: [PERM-CONTRACT-CREATE]
-      - actionId: actSubmit
-        name: 提交
-        actionType: SUBMIT
-        behaviorRef: Contract_Submit
-        permissionRef: [PERM-CONTRACT-CREATE]
-      - actionId: actCancel
-        name: 取消
-        actionType: BUTTON
-        behaviorRef: Contract_Cancel
+      - { actionId: act-contract-draft,  name: 保存草稿, actionType: DRAFT,  event: contract_save_draft,
+          toolRef: contract_save_as_draft, behaviorRef: Contract_SaveAsDraft }
+      - { actionId: act-contract-submit, name: 提交,     actionType: SUBMIT, event: contract_submit,
+          toolRef: contract_submit,        behaviorRef: Contract_Submit }
 
-  - screenId: frmContractQuery
-    name: 合同信息查询
-    screenType: QUERY_LIST
-    layout: |
-      ┌──────────────────────────────────────────────────────────────┐
-      │ 合同信息查询                                            [btnExit] │
-      ├──────────────────────────────────────────────────────────────┤
-      │ 合同编号:[txtContractNo]  合同名称:[txtContractName]  合同类型:(cboContractType) │
-      │ 所属部门:[pslDepartment]  签订时间从:{dtpStart}  到:{dtpEnd}     │
-      │ [btnQuery] [btnReset]                                         │
-      ├──────────────────────────────────────────────────────────────┤
-      │ @grdResult                                                    │
-      │  合同编号 | 合同名称 | 合同类型 | 合同金额 | 责任人 | 客户 | 部门 │
-      │ [分页: 共N条 | 第1/20页 | 上一页 | 下一页]                     │
-      └──────────────────────────────────────────────────────────────┘
-    elements:
-      - id: txtContractNo
-        type: TEXTBOX
-        label: 合同编号
-        io: I
-        dataBinding: Contract.contractNo
-      - id: txtContractName
-        type: TEXTBOX
-        label: 合同名称
-        io: I
-        dataBinding: Contract.contractName
-      - id: cboContractType
-        type: COMBO
-        label: 合同类型
-        io: I
-        dataBinding: Contract.contractType
-      - id: pslDepartment
-        type: POPUP_SELECT
-        label: 所属部门
-        io: I
-        dataBinding: Contract.departmentId
-      - id: dtpStart
-        type: DATEPICKER
-        label: 签订时间从
-        io: I
-      - id: dtpEnd
-        type: DATEPICKER
-        label: 到
-        io: I
-      - id: grdResult
-        type: GRID
-        label: 查询结果
-        io: O
-        dataSource: REP-CONTRACT-LIST
-      - id: btnQuery
-        type: BUTTON
-        label: 查询
-      - id: btnReset
-        type: BUTTON
-        label: 重置
-
+  # 形态二：宿主界面声明（自带前端实现的重界面）
+  - uiUnitId: ui-execution-report
+    name: 合同执行情况分析
+    unitType: MCP_APP
+    renderMode: STATIC
+    mcpApp:
+      resourceUri: "ui://contract/execution-report"
+      mimeType: "text/html;profile=mcp-app"
+      templateOfTool: contract_query_execution_analysis
+      allowedTools: [contract_query_execution_analysis, contract_query_detail]
     actions:
-      - actionId: actQuery
-        name: 查询
-        actionType: BUTTON
-        behaviorRef: Contract_QueryList
-        permissionRef: [PERM-CONTRACT-QUERY]
-      - actionId: actReset
-        name: 重置
-        actionType: BUTTON
-        behaviorRef: Contract_ResetQuery
+      - { actionId: act-export-execution, name: 导出, actionType: EXPORT, event: export_execution_report,
+          toolRef: contract_query_execution_analysis, behaviorRef: Contract_QueryExecutionAnalysis }
+
+  # 形态三：运行期生成（仅限只读探索分析）
+  - uiUnitId: ui-adhoc-analysis
+    name: 合同执行自由分析
+    unitType: A2UI_SURFACE
+    renderMode: GENERATED
+    generationContract:
+      intent: 对合同执行情况按用户临时提问做探索式分析与可视化
+      dataSources: [rpt_contract_execution, rpt_unreceived]
+      allowedComponents: [Text, Heading, Card, DataTable, Chart, Button]
+      allowedTools: [contract_query_execution_analysis, contract_query_invoiced_unreceived]
 ```
 
-## 8.7  一致性约束（MU 门禁）
+## 8.7 一致性约束（MU 门禁）
 
-1. `element.dataBinding` 字段路径必须可解析到 M1 聚合属性；
-2. `element.dataSource` 引用的 M7 对象必须存在；
-3. 操作功能点 `behaviorRef` 引用的 M2 行为必须存在；
-4. 带审批流的功能屏幕必须同时包含 `DRAFT` 与 `SUBMIT` 两个功能点；
-5. **反向门禁**：M2 中 `triggerType=USER_ACTION` 的行为必须被至少一个 MU 操作功能点引用；
-6. 控件类型必须遵循 §8.3 映射规则（日期→DATEPICKER、枚举/字典→COMBO、对象引用→POPUP_SELECT）；
-7. 屏幕布局必须遵循 §8.4 布局规则（单表 2 列、主从主表 3 列 + 从表表格、查询条件 3 列 + 结果表格分页、**列表维护界面为「工具栏 + 列表」且新增/编辑走弹窗**）；
-8. `layout` 中出现的 elementId 必须存在于该屏幕 `elements`，且 `io`/`required` 标注一致；
-9. 二级菜单必须关联屏幕，且每级一级菜单下至少存在一个二级菜单。
-
+1. 组件 `dataBinding` 的字段路径必须可解析到 M1 聚合属性，且与 `dataModel` 中声明的路径绑定一致；
+2. `generationContract.dataSources` 与 `Chart.dataSourceRef` 引用的 M7 报表对象必须存在；
+3. 操作功能点的 `toolRef` 必须存在于 `tools`，且其 `behaviorRef` 必须与该工具的 `behaviorRef` 完全一致；
+4. `tools` 与 M2 中 `triggerType=USER_ACTION` 的行为**严格 1:1**：每个 `USER_ACTION` 行为恰好一个工具，每个工具恰好一个行为；`triggerType=SYSTEM` 的行为不得出现在 `tools` 中；
+5. **反向门禁**：每个 `triggerType=USER_ACTION` 行为对应的工具，必须被至少一个 `capability.toolRef` 或某个界面单元的 `actions[].toolRef` 引用（防止孤儿行为）；
+6. 组件的 `component` 类型必须属于 `application.uiProtocols.a2ui.catalogRef` 声明的目录，且遵循 §8.3 的映射规则；
+7. `renderMode=GENERATED` 的界面单元，其 `allowedTools` 必须全部 `readOnlyHint=true`，且不得声明 `actions`；
+8. 带审批流的界面单元必须为 `renderMode=STATIC`，且必须同时包含 `DRAFT` 与 `SUBMIT` 两个独立操作功能点；
+9. 组件邻接表完整性：`root` 必须存在于 `components`；`children.explicitList` 引用的组件 ID 必须存在；组件引用图必须**无环**；除根组件外，每个组件必须被恰好一个父组件引用一次（无孤儿、无重复挂载）；
+10. 每个 `capability` 必须至少解析到 `uiUnitRef` 或 `toolRef` 之一，且 `utterances` 至少 1 条；
+11. `mcpApp.resourceUri` 必须以 `ui://` 开头，`mimeType` 固定为 `text/html;profile=mcp-app`，`templateOfTool` 与 `allowedTools` 引用的工具必须存在于 `tools`。
 ---
 
 # 第九章  传统需求覆盖度分析
@@ -1974,7 +1859,7 @@ screens:
 | 人工审批流 | 完整覆盖 | M6 `APPROVAL` 流程 + M5 角色 |
 | 跨对象查询、统计分析 | 完整覆盖 | M7 查询统计对象 + 一对一 M2 QUERY 行为 |
 | 固定业务报表 | 完整覆盖 | M7 REPORT 对象 + 一对一 M2 QUERY 行为 |
-| 菜单导航与界面布局 | 完整覆盖 | MU UI 模型（菜单树 + ASCII 布局 + 操作功能点） |
+| 用户能力入口与界面单元结构 | 完整覆盖 | MU UI 模型（应用 → 能力目录 → 工具契约 → A2UI Surface / MCP App 界面单元 → 操作功能点） |
 | 异常、驳回、退回路径 | 主要语义覆盖 | M2 前后置条件、M6 分支与终止路径 |
 | 对象到数据库表的映射 | 框架外 | 实现阶段以 ORM 注解或 DDL 直接落地 |
 | 本系统对外接口 / 外部接口 | 框架外（明确排除） | 本系统当前无外部系统交互 |
@@ -1999,7 +1884,7 @@ screens:
 
 ## 9.4  已知边界
 
-- **UI/UX**：MU 承载菜单导航、屏幕结构、元素与操作功能点；不建模视觉样式、动画、无障碍、主题与终端适配；
+- **UI/UX**：MU 承载用户能力目录、工具契约、A2UI Surface / MCP App 界面单元结构与操作功能点；不建模视觉样式、组件目录实现、传输协议、动画、无障碍、主题与终端适配；
 - **数据库映射**：对象到物理表/字段的映射由实现阶段 ORM/DDL 落地，不在本体层建模；
 - **接口**：本系统不涉及外部接口，接口契约不建模；如未来需要对接外部系统，可后续补充；
 - 不独立建模性能、容量、可靠性、安全合规等可量化质量属性；
@@ -2023,7 +1908,7 @@ screens:
 | 5 | M7 查询统计与报表模型 | 在 M1 字段和 M2 查询行为稳定后，建立严格一对一查询报表定义 |
 | 6 | M5 主体模型（权限） | 定义权限并绑定 M2 行为；M7 不直接绑定权限 |
 | 7 | M6 流程模型 | 定义端到端协同流和审批流，引用角色、行为、规则及子流程 |
-| 8 | MU UI 模型 | 定义菜单树、屏幕、ASCII 布局与操作功能点，引用 M2 行为，并反向校验可追溯性 |
+| 8 | MU UI 模型 | 定义应用、能力目录、工具契约、A2UI Surface / MCP App 界面单元与操作功能点，引用 M1/M2/M6/M7，并反向校验可追溯性 |
 
 ## 10.2  模型评审检查清单
 
@@ -2075,15 +1960,16 @@ screens:
 - [ ] REPORT 是否定义固定列、分组/合计及导出格式？
 
 ### MU UI 模型评审
-- [ ] 是否采用"总体界面 → 一级菜单 → 二级菜单 → 屏幕 → 操作功能点"层级？
-- [ ] 每个一级菜单是否至少包含一个二级菜单？
-- [ ] 每个二级菜单是否关联了屏幕？
-- [ ] 每个屏幕是否声明了 elements 与 actions？
-- [ ] 控件类型是否遵循映射规则（日期→DATEPICKER、枚举/字典→COMBO、对象引用→POPUP_SELECT）？
-- [ ] 布局是否遵循规则（单表 2 列、主从主表 3 列 + 从表表格、查询条件 3 列 + 结果表格分页）？
-- [ ] 带审批流的功能是否包含"保存草稿"和"提交"两个独立功能点？
-- [ ] 每个操作功能点引用的 M2 行为是否存在且 triggerType 匹配？
-- [ ] 是否所有 USER_ACTION 行为都能从某操作功能点反向追溯？
+- [ ] 能力目录是否覆盖所有 `triggerType=USER_ACTION` 行为（无孤儿、可反向追溯）？
+- [ ] 每个 `USER_ACTION` 行为是否恰好对应一个 `toolRef`？`triggerType=SYSTEM` 行为是否均未出现在 `tools`？
+- [ ] 每个 `capability` 是否至少解析到 `uiUnitRef` 或 `toolRef` 之一，且 `utterances` 不少于 1 条？
+- [ ] 界面单元是否标注了 `unitType`（A2UI_SURFACE / MCP_APP）与 `renderMode`（STATIC / GENERATED）？两者是否正交使用？
+- [ ] `renderMode=GENERATED` 单元的 `allowedTools` 是否全部 `readOnlyHint=true`，且未声明 `actions`？
+- [ ] 组件类型是否来自 `catalogRef` 声明的目录？M1 属性类型到组件的映射是否符合 §8.3（Date→DateTimeInput、Enum/DictionaryRef→Select、AggregateRootRef→EntityPicker 等）？
+- [ ] A2UI Surface 的组件邻接表是否无环、每个组件被恰好一个父组件引用一次、`root` 与 `children.explicitList` 引用全部存在？
+- [ ] 带审批流的界面单元是否为 `renderMode=STATIC`，且同时包含 `DRAFT` 与 `SUBMIT` 两个独立操作功能点？
+- [ ] 每个操作功能点的 `toolRef.behaviorRef` 与 `behaviorRef` 字段是否一致？
+- [ ] `mcpApp.resourceUri` 是否以 `ui://` 开头、`mimeType` 固定为 `text/html;profile=mcp-app`、所引用工具均存在？
 
 ## 10.3  文件存储、导入与版本管理
 
@@ -2113,9 +1999,9 @@ yaml/
 | 工具场景 | 建议方案 |
 |----------|----------|
 | 模型编辑 | VS Code + YAML 插件 + 自定义 JSON Schema 校验 |
-| 可视化 | 生成聚合 ER 图、流程泳道图、菜单树与 ASCII 布局图 |
-| 一致性检查 | 检查行为 ownerEntity、syncTriggers 引用、M2/M7 一对一、M6 流程引用、MU 操作点门禁 |
-| 代码生成 | 生成实体骨架、行为方法签名、权限枚举、查询 Service、报表导出骨架、菜单路由与界面骨架 |
+| 可视化 | 生成聚合 ER 图、流程泳道图、能力目录视图、A2UI Surface 组件图与 MCP App 资源视图 |
+| 一致性检查 | 检查行为 ownerEntity、syncTriggers 引用、M2/M7 一对一、M6 流程引用、MU 工具/能力/操作功能点门禁 |
+| 代码生成 | 生成实体骨架、行为方法签名、权限枚举、查询 Service、报表导出骨架、A2UI Surface 声明与 MCP App 资源入口；渲染端、传输协议与前后端代码由实现层落地 |
 
 ---
 
@@ -2139,10 +2025,10 @@ yaml/
 | RBAC | 基于角色的访问控制 |
 | ABAC | 基于属性的访问控制，比 RBAC 更细粒度 |
 | 数据字典（Data Dictionary） | 对象模型中的引用数据定义，业务数据保存 code、界面显示 label |
-| 跳选框（Popup Select） | 对象引用（AggregateRootRef）的界面控件：左边文本框 + 右边按钮弹出对话框选择 |
-| 操作功能点（Action Point） | MU 中界面上一个按钮/动作到 M2 行为的对应入口 |
+| 跳选框（Entity Picker） | 对象引用（AggregateRootRef）的界面组件（§8.3 中映射为 `EntityPicker`）：允许用户从目标聚合中检索并选定一个聚合根 ID |
+| 操作功能点（Action Point） | MU 界面单元上的一个用户动作到工具再到 M2 行为的对应入口（actionPoint → toolRef → M2 behaviorRef） |
 | 悬空引用（Dangling Reference） | 模型中引用了不存在的目标，需通过校验防止 |
 
 ---
 
-*© 2026  Ontology-Driven Software Modeling Framework  v9.0（单体同步版 · 七模型）*
+*© 2026  Ontology-Driven Software Modeling Framework  v9.1（单体同步版 · 七模型）*
