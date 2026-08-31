@@ -40,9 +40,9 @@ description: 当用户要基于业务需求，通过「需求探索 → 本体�
 - **唯一依据**：`references/ontology_modeling_framework_v9.md`（七模型元文件规范 + 各模型 YAML 模板）。
 - **输入**：阶段一需求文档，尤其其**附录 C 七模型建模输入基线**（是后续 YAML 的确定性输入，不得再做大范围业务拆分）。
 - **产物**：M1 对象 / M2 行为 / M3 规则 / M5 主体 / M6 流程 / M7 查询报表 / MU UI 共七个 YAML + `manifest.json`，输出到当前项目的 `yaml/` 目录。
-- **建模顺序建议**（见指导书 §4 步骤 1）：M1 → M5 角色 → M3 规则 → M2 行为 → M7 查询 → M5 权限 → M6 流程 → MU 界面。
+- **建模顺序建议**（见指导书 §4 步骤 1）：M1 → M5 角色 → M3 规则 → M2 行为 → M7 查询 → M5 权限 → M6 流程 → MU UI（v9.1 改为应用 → 能力目录 → 工具契约 → 界面单元 → 操作功能点的 AI 原生结构）。
 - **一致性门禁（强制）**：建模后核对——
-  - 可追溯门禁：M2 `triggerType=USER_ACTION` 行为须被至少一个 MU 操作功能点引用；MU 引用行为须存在。
+  - 可追溯门禁：M2 `triggerType=USER_ACTION` 行为须被至少一个 MU 工具契约引用，且工具 ↔ USER_ACTION 行为严格 1:1；`triggerType=SYSTEM` 行为不得暴露为工具。
   - M7 `behaviorRef` ↔ M2 `queryReportRef` 严格一对一。
   - M6 的 `roleRef` / `behaviorRef` / `subFlowRef` / `ruleRef` 引用均须存在；`SUB_FLOW_CALL` 调用图无环。
   - 每个正式查询报表与唯一 M2 QUERY 行为双向一对一；联动描述中规则条件与结论不混写。

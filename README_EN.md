@@ -102,7 +102,7 @@ The skill runs as **two strongly ordered stages**, each separated by mandatory h
 ### Stage 2: Ontology Modeling → Seven-model YAML
 - **Basis**: `references/ontology_modeling_framework_v9.md`.
 - **Input**: Appendix C baseline from Stage 1 (a deterministic input — no further large-scale business splitting).
-- **Output**: seven YAML files — M1 object / M2 behavior / M3 rule / M5 actor / M6 flow / M7 query-report / MU UI — plus `manifest.json`, written to `yaml/`.
+- **Output**: seven YAML files — M1 object / M2 behavior / M3 rule / M5 actor / M6 flow / M7 query-report / MU UI (v9.1 AI-native: Application → Capability → Tool contract → UIUnit → ActionPoint) — plus `manifest.json`, written to `yaml/`.
 - **Consistency gate**: traceability, M7↔M2 one-to-one, M6 references acyclic, etc.
 
 ## 5. Trigger phrases (just say to the agent)
