@@ -17,6 +17,7 @@
 | `shacl/m7_report_shape.ttl` | M7 Report/SourceObject 形状 | — | SHACL 形状 |
 | `shacl/run_shacl.py` | pyshacl 校验器 | data + shape | conforms bool + violations |
 | `sparql_queries.py` | **跨文件 SPARQL 查询演示** | reference-example/*.jsonld | 表格结果 |
+| `merge_rdf.py` | **并图打包**：逐模型 RDF → 单图（新增产物） | 目录内派生 `.jsonld` + `.shacl.ttl` | `<dir>/ontology-merged.ttl` |
 
 ## validate.py 用法
 
@@ -65,6 +66,19 @@ file.suffix
 | 调度方 | MetaSkill 步骤 12（skill_exec）/ CI | model-validator 子进程 / CI |
 
 两者互补，不重叠；本目录脚本不校验 YAML（`validate.py` 路由为 SKIP）。
+
+## 合并产物（ontology-merged.ttl）
+
+```bash
+# 逐模型派生文件齐备后，并成单一 Turtle 图（打包产物）
+python scripts/merge_rdf.py reference-example/            # → reference-example/ontology-merged.ttl
+python scripts/merge_rdf.py reference-example/ --format json
+```
+
+- **并图 = 新增产物，不替代**：逐模型 JSON-LD / SHACL、manifest.jsonld 全部原样保留；门禁（`validate.py` / 步骤 12 的 9 条检查）不消费该文件，`validate.py` 收集目标时天然忽略 `.ttl`。
+- **源清单固定**：m1/m2/m3/m5/m6/m7 六个派生文件；`manifest.jsonld`（索引元数据）与 `m3-*-fixture.jsonld`（测试数据）不并入。缺哪个跳过哪个，不报错。
+- **自包含 SHACL bundle**：M3 的形状与其余模型的数据在同一图，拿 merged 文件既当数据图又当形状图可直接 `pyshacl` 校验。
+- 退出码：0 成功；2 目录不存在或无任何可并源文件。黄金范例为 1872 triples，重跑输出确定（CI 有 diff 校验）。
 
 ## 依赖
 
@@ -145,12 +159,11 @@ python scripts/sparql_queries.py --all
 | `shacl/run_shacl.py` M7 | Report/SourceObject 约束（5 报表：4 query 类型 + primary 唯一） | ✅ conforms |
 | `shacl/run_shacl.py` M3 | M3 SHACL: 3/13 rules translated cleanly (single-entity Contract); 10/13 mixed-entity rules emit rdfs:comment + property shapes only (degraded by design) | ✅ mixed + positive fixtures conform/violate as expected |
 | `sparql_queries.py` Q1-Q5 | 5 跨文件查询 | ✅ 全部返回结果 |
+| `merge_rdf.py` | 6 源并图 → ontology-merged.ttl | ✅ 1872 triples，回读一致，自校验 conforms |
 
 ## 后续路线（来自 spec）
 
 | 阶段 | 任务 |
 | --- |---|
 | 5 | `pyshacl` SHACL 校验集成；补全 `od:DictionaryType.items[]` / `od:Report.joins` / 双向 Actor-Role 引用 |
-| 6 | 把 `validate_od_jsonld.py` + `validate_m6jsonld.py` 整合到 ontology-modeler 的内置 step（本目录） |
-
-详细见 [2026-09-01-yaml-to-jsonld-design.md § 五](../../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md)。
+| 6 | 把 `validate_od_jsonld.py` + `validate_m6jsonld.py` 整合到 ontology-modeler 的内置 step（本目录） | 

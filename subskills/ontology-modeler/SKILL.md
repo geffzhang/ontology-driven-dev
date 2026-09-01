@@ -49,6 +49,8 @@ YAML 是单一事实来源；派生文件一律经 `scripts/` 转换器生成。
 | M6 | `scripts/yaml2m6jsonld.py` | meta: | `<同名>.jsonld`（复用 OpenClaw MetaSkill 词表） |
 | MU | — 不迁移（按设计） | — | 仅 YAML；manifest.jsonld 中标记 `od:notMigrated: true` |
 
+全部迁移模型的派生文件（M1/M2/M3/M5/M6/M7 六份）齐备后，可运行 `scripts/merge_rdf.py <yaml目录>` 打包生成 `ontology-merged.ttl` ——**并图是新增产物**，不替代上表任何逐模型文件；manifest.jsonld 与 M3 fixtures 不并入（见步骤 7 要点与 scripts/README.md）。
+
 ## 三、输入约定
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -178,6 +180,7 @@ python scripts/yaml2od_jsonld.py  ../../yaml/m7-report-model.yaml     # → m7-r
 - M2 只迁元数据层：JSON-LD 中每个 behavior 保留 `od:yamlPointer` 反向指针，控制流字段留在 YAML（§11.6 双层约定）。
 - M3 产出 SHACL Turtle：`sh:property` 按 inputParam 逐个生成，业务 DSL 经 5 模式翻译为合法 SPARQL；混合实体规则优雅降级为 `rdfs:comment`（转换器会打印 stderr 警告）。
 - MU 不派生（按设计）。
+- 打包（可选）：`yaml/` 内六个迁移模型的派生文件齐备后（通常 M6 批次收尾时），运行 `python scripts/merge_rdf.py ../../yaml/` 生成 `ontology-merged.ttl` —— 并图新产物，**旧产物保持不变**；manifest.jsonld 与 M3 fixtures 不并入，门禁（步骤 8 / 步骤 12）不校验该文件。
 
 ### 步骤 8：一致性自检（交付门禁）
 
@@ -220,6 +223,7 @@ python scripts/drift_check.py ../../yaml/              # YAML ↔ JSON-LD ID 集
 |---|---|---|---|
 | `model_files` | 是 | object[string, string] | 每个产出的模型 → YAML 相对路径（上游 MetaSkill 的 `prior_models` 依赖此字段，**不可**改为对象） |
 | `jsonld_files` | 是 | object[string, string] | 每个迁移模型的派生路径（`.jsonld`；M3 为 `.shacl.ttl`）；MU 无此条目 |
+| `merged_rdf` | 否（可选） | string | 六模型派生齐备时 `merge_rdf.py` 的打包输出相对路径（`ontology-merged.ttl`）；并图新产物，不替代逐模型文件 |
 | `generation_log` | 是 | string[] | 每行一条生成摘要，包含对象/规则/角色计数 |
 | `validation` | 是 | object | `validate_py` 与 `drift` 汇总；任一 failed / 漂移非零即抛错，不得交付 |
 | `manifest_path` | `write_manifest=true` 时必填 | string | manifest.json 相对路径（同目录另有 manifest.jsonld） |
@@ -243,7 +247,7 @@ python scripts/drift_check.py ../../yaml/              # YAML ↔ JSON-LD ID 集
 | Read | 读 V9 规范、读基线文档、读上游 YAML | ✅ 必需 |
 | Write | 写 YAML 文件、写 manifest.json | ✅ 必需 |
 | Bash（mkdir）| 首次创建 yaml/ 目录 | ✅ 必需（仅步骤 9） |
-| Bash（python）| 运行 `scripts/` 转换器（yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / yaml2manifest） | ✅ 必需（步骤 7） |
+| Bash（python）| 运行 `scripts/` 转换器（yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / yaml2manifest）；全部派生齐备后可选 `scripts/merge_rdf.py` 打包 | ✅ 必需（步骤 7） |
 | Bash（python）| 运行 `scripts/validate.py` + `scripts/drift_check.py` 自检 | ✅ 必需（步骤 8） |
 | Bash（python）| `scripts/shacl/run_shacl.py <data> <shape>`（pyshacl 验证，可选深度自检） | 可选 |
 | Glob | 兜底查找 yaml/ 已有文件 | 可选 |
@@ -289,8 +293,8 @@ MetaSkill 步骤 12 (skill_exec → model-validator scripts/validate_yaml_refs.p
 - 上游 MetaSkill：[`../SKILL.md`](../SKILL.md)
 - 方法论规范：[`references/ontology_modeling_framework_v9.md`](references/ontology_modeling_framework_v9.md)（§ 十一 JSON-LD 序列化协议；§11.6 M2 双层约定）
 - 词表：[`references/od-vocabulary-v9.ttl`](references/od-vocabulary-v9.ttl) + [`references/od-context-v9.jsonld`](references/od-context-v9.jsonld)（冻结的 od: 词表 v9）
-- 黄金范例：[`reference-example/`](reference-example/)（7 个模型 YAML + 5 份 JSON-LD + m3 SHACL + manifest.json + manifest.jsonld，平铺目录）
-- 转换与校验工具：[`scripts/`](scripts/)（yaml2manifest / yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / validate / drift_check / sparql_queries；SHACL shapes 在 [`scripts/shacl/`](scripts/shacl/)）
-- 漂移守护 CI：[`../../.github/workflows/drift-check.yml`](../../.github/workflows/drift-check.yml)（每周一 cron：validate + drift + SHACL + SPARQL smoke）
+- 黄金范例：[`reference-example/`](reference-example/)（7 个模型 YAML + 5 份 JSON-LD + m3 SHACL + manifest.json + manifest.jsonld + ontology-merged.ttl 并图产物，平铺目录）
+- 转换与校验工具：[`scripts/`](scripts/)（yaml2manifest / yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / validate / drift_check / sparql_queries / merge_rdf；SHACL shapes 在 [`scripts/shacl/`](scripts/shacl/)）
+- 漂移守护 CI：[`../../.github/workflows/drift-check.yml`](../../.github/workflows/drift-check.yml)（每周一 cron：validate + drift + SHACL + SPARQL + 并图确定性 smoke）
 - 阶段 6 跨仓库收尾：openclaw.net `ValidateJsonLdTool.cs` 待重估（Python 门禁已覆盖其 check 面；本仓库绝不修改 openclaw.net 内任何 .cs 文件）
 - 跨引用门禁：[`../model-validator/`](../model-validator/)（步骤 12 `skill_exec` 的 6 条检查 + 3 条 JSON-LD 门禁，后 3 条经子进程复用本工具链）

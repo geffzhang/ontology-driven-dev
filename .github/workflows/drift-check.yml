@@ -22,6 +22,15 @@ jobs:
               subskills/ontology-modeler/reference-example/ \
               subskills/ontology-modeler/reference-example/manifest.json
       - run: |
+          # 并图确定性 smoke：重跑 merge_rdf.py，与已提交的 golden 逐字节比对
+          tmp=$(mktemp -d)
+          python subskills/ontology-modeler/scripts/merge_rdf.py \
+              subskills/ontology-modeler/reference-example/ \
+              --out "$tmp/ontology-merged.ttl" --format json
+          diff "$tmp/ontology-merged.ttl" \
+              subskills/ontology-modeler/reference-example/ontology-merged.ttl \
+              && echo "[OK] ontology-merged.ttl deterministic"
+      - run: |
           for f in m1 m5 m6 m7; do
             case $f in
               m6) shape=m6_flow_shape ;;
