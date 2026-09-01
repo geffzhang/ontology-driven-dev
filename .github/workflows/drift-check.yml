@@ -18,6 +18,9 @@ jobs:
           python subskills/ontology-modeler/scripts/drift_check.py \
               subskills/ontology-modeler/reference-example/
           python subskills/ontology-modeler/scripts/sparql_queries.py --all > /dev/null
+          python subskills/model-validator/scripts/validate_yaml_refs.py \
+              subskills/ontology-modeler/reference-example/ \
+              subskills/ontology-modeler/reference-example/manifest.json
       - run: |
           for f in m1 m5 m6 m7; do
             case $f in

@@ -155,32 +155,47 @@ for each jsonLdFile in jsonLdFiles:
 
 ## 四、MetaSkill 步骤 12 调用方式
 
-当前 MetaSkill 步骤 12 调用 `validate_yaml_references`（YAML 通道），来源见
-[`SKILL.md` § 五](../../SKILL.md#五tool_call-实现)：
+当前 MetaSkill 步骤 12 为 `skill_exec`（YAML 通道），entrypoint 指向本仓库
+`subskills/model-validator/scripts/gate.ps1`，6 条检查的 Python 移植
+`validate_yaml_refs.py` 语义对齐 `ValidateYamlReferencesTool.cs`（来源见
+[`SKILL.md` § 五](../../SKILL.md#五tool_call-与-skill_exec-实现)）：
 
 ```yaml
 - id: validate_cross_refs
-  kind: tool_call
-  tool: validate_yaml_references
-  tool_allowlist: [validate_yaml_references]
+  kind: skill_exec
+  skill: model-validator
+  skill_exec_entrypoint: scripts/gate.ps1
+  skill_exec_parse_mode: json
+  skill_exec_args:
+    - "{{ inputs.workspace_dir }}/yaml"
+    - "{{ outputs.p2_flows_ui.manifest_path }}"
 ```
+
+> 演进记录：步骤 12 原为 `tool_call → validate_yaml_references`（OpenClaw 内置 C# 工具），
+> 后改为 `skill_exec → model-validator`（本地 Python 门禁，退出码非 0 = 步骤失败），
+> 使校验逻辑与 Skill 同仓演进，不必等待 openclaw.net 发版。
 
 ### 4.1 未来两步走（YAML → YAML + JSON-LD 并行）
 
 ```yaml
-# 阶段 5.5（当前 plan）— 仅 YAML 通道
+# 当前 — 仅 YAML 通道（skill_exec）
 - id: validate_cross_refs
-  kind: tool_call
-  tool: validate_yaml_references
-  tool_allowlist: [validate_yaml_references]
+  kind: skill_exec
+  skill: model-validator
+  skill_exec_entrypoint: scripts/gate.ps1
+  skill_exec_parse_mode: json
+  skill_exec_args:
+    - "{{ inputs.workspace_dir }}/yaml"
+    - "{{ outputs.p2_flows_ui.manifest_path }}"
 ```
 
 ```yaml
 # 阶段 6（spec 路线图）— YAML + JSON-LD 双通道
 - id: validate_cross_refs_yaml
-  kind: tool_call
-  tool: validate_yaml_references
-  tool_allowlist: [validate_yaml_references]
+  kind: skill_exec
+  skill: model-validator
+  skill_exec_entrypoint: scripts/gate.ps1
+  skill_exec_parse_mode: json
 
 - id: validate_cross_refs_jsonld
   kind: tool_call
@@ -191,15 +206,16 @@ for each jsonLdFile in jsonLdFiles:
     vocabStrategy: "od"             # 默认 od；M6 文件单独传 meta
 ```
 
-> **本仓库当前不修改 MetaSkill**：阶段 5.5 收尾报告（Task 12）只标记 Task 11
-> 跨仓库 PR 待办；阶段 6 才在 MetaSkill `SKILL.md` 加 `validate_json_ld` 步骤。
+> **阶段 6 计划不变**：在 MetaSkill `SKILL.md` 加 `validate_json_ld` 步骤；
+> JSON-LD 门禁也可在 `model-validator` Skill 内新增 entrypoint 承载（见其 SKILL.md § 六）。
 
 ### 4.2 OpenClaw 工具分发
 
 OpenClaw 运行时按 `ITool.Name` 字面量（`StringComparer.Ordinal` 严格相等）在
 `_toolsByName` 字典中查找。引用：
 [`OpenClawToolExecutor.cs:207`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/OpenClawToolExecutor.cs#L207)。
-两个工具都是 OpenClaw 自带，**开箱即用、无需额外注册或路径桥接**。
+步骤 8 的 `write_file` 为 OpenClaw 自带，**开箱即用、无需额外注册或路径桥接**。
+步骤 12 的 `skill_exec` 不经过工具注册表——entrypoint 按 Skill 根目录解析为子进程执行。
 
 ---
 
@@ -296,5 +312,5 @@ OpenClaw 运行时按 `ITool.Name` 字面量（`StringComparer.Ordinal` 严格�
 
 - [x] **本仓库**：本文档已落地（Task 11 唯一产物）
 - [ ] **openclaw.net**：`ValidateJsonLdTool.cs` 待 PR（**不在本工作树实施**）
-- [ ] **本仓库 MetaSkill SKILL.md**：阶段 5.5 内**不变更**（阶段 6 才加 `validate_json_ld` 步骤）
-- [ ] **Task 12 AC5**：跨仓库回归测试，待 openclaw.net 端 PR 合入后跑现有 YAML 测试不破
+- [x] **本仓库 MetaSkill SKILL.md**：步骤 12 已改为 `skill_exec → model-validator`（Python 门禁，见 § 四）；阶段 6 的 `validate_json_ld` 步骤待加
+- [ ] **Task 12 AC5**：跨仓库回归测试，待 openclaw.net 端 PR 合入后跑现有 YAML 测试不破（`ValidateYamlReferencesTool.cs` 的 6-check 单测不受本仓库变更影响）

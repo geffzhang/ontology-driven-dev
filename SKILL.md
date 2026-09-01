@@ -434,29 +434,19 @@ composition:
         required_properties: [model_files, generation_log, manifest_path]
 
     - id: validate_cross_refs
-      kind: tool_call
-      tool: validate_yaml_references
-      tool_allowlist: [validate_yaml_references]
+      # 6 条检查的语义定义见 subskills/model-validator/SKILL.md 第一节；
+      # 脚本实现 scripts/validate_yaml_refs.py（Python 移植自 OpenClaw ValidateYamlReferencesTool.cs）。
+      kind: skill_exec
+      skill: model-validator
+      skill_exec_entrypoint: scripts/gate.ps1
+      skill_exec_parse_mode: json
+      skill_exec_args:
+        - "{{ inputs.workspace_dir }}/yaml"
+        - "{{ outputs.p2_flows_ui.manifest_path }}"
       depends_on: [p2_flows_ui]
       retry:
         max_attempts: 2
         backoff_ms: 1000
-      tool_args:
-        yaml_dir: "{{ inputs.workspace_dir }}/yaml"
-        manifest: "{{ outputs.p2_flows_ui.manifest_path }}"
-        checks:
-          - id: traceability
-            description: "M2 triggerType=USER_ACTION 行为须被至少一个 MU 操作功能点引用；MU 引用行为须存在"
-          - id: query_mapping
-            description: "M7 behaviorRef ↔ M2 queryReportRef 严格一对一"
-          - id: flow_refs
-            description: "M6 roleRef / behaviorRef / subFlowRef / ruleRef 引用均须存在"
-          - id: acyclic_call_graph
-            description: "M6 SUB_FLOW_CALL 调用图无环"
-          - id: query_behavior_bidir
-            description: "每个正式查询报表与唯一 M2 QUERY 行为双向一对一"
-          - id: rule_condition_separation
-            description: "联动描述中规则条件与结论不混写"
 ---
 
 # 本体驱动需求与建模技能（MetaSkill 版）
@@ -468,6 +458,7 @@ composition:
 > - 子 Skill 由 OpenClaw SkillLoader 解析，需启用 `Skills.Load.ScanSubdirectories`：
 >   - `subskills/req-explorer/SKILL.md`（阶段一 7 阶段探索执行器）
 >   - `subskills/ontology-modeler/SKILL.md`（阶段二七模型生成执行器）
+>   - `subskills/model-validator/SKILL.md`（步骤 12 跨引用门禁，skill_exec entrypoint）
 > - 子 Skill 自带的规范与范例位于其各自的 `references/`、`reference-example/` 子目录
 
 ## 一、12 步骨架
@@ -485,7 +476,7 @@ composition:
 | 9 | `p2_objects_roles` | `agent → ontology-modeler` | M1 + M5(角色) |
 | 10 | `p2_behaviors_rules` | `agent → ontology-modeler` | M2 + M3 + M7 |
 | 11 | `p2_flows_ui` | `agent → ontology-modeler` | M5'(权限) + M6 + MU + manifest.json |
-| 12 | `validate_cross_refs` | `tool_call (validate_yaml_references)` | 6 条跨引用门禁一次性扫描 |
+| 12 | `validate_cross_refs` | `skill_exec (model-validator scripts/gate.ps1)` | 6 条跨引用门禁一次性扫描 |
 
 ## 二、关键设计决策
 
@@ -502,6 +493,7 @@ composition:
 |---|---|---|
 | `req-explorer` | `subskills/req-explorer/SKILL.md` | `references/AI需求探索与确认提示词V9.0.md`、`reference-example/合同管理需求规格说明书-V9.md` |
 | `ontology-modeler` | `subskills/ontology-modeler/SKILL.md` | `references/ontology_modeling_framework_v9.md`、`reference-example/`（7 个 YAML + manifest.json）、`scripts/`（转换与校验工具链） |
+| `model-validator` | `subskills/model-validator/SKILL.md` | `scripts/gate.ps1` + `scripts/validate_yaml_refs.py`（6 条跨引用门禁，Python 移植自 OpenClaw ValidateYamlReferencesTool.cs） |
 
 ## 四、失败兜底
 
@@ -524,13 +516,12 @@ composition:
 - 子 Skill 抛出的结构性错误（缺基线、缺上游模型、引用断裂）需用户先解决底层问题，再重发原请求。
 - 用户明确说"重做阶段 N"时，由 `detect_entry` 路由到 `entry="reconfirm_stage_<N>"`，从该阶段所在簇重启，不要从阶段 0 全量重跑。
 
-## 五、tool_call 实现
+## 五、tool_call 与 skill_exec 实现
 
-| Step | `tool` 名称 | 实现来源 | 说明 |
-|---|---|---|---|
-| 8 `write_requirement_doc` | `write_file` | OpenClaw 内置（[`FileWriteTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/FileWriteTool.cs)） | 原子写入 + 自动创建父目录 + 路径策略沙箱保护 |
-| 12 `validate_cross_refs` | `validate_yaml_references` | OpenClaw 内置（[`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)） | 6 条交叉引用门禁一次性扫描；任一 FAIL 则整体 `status: FAIL` |
+| Step | 形式 | 名称 | 实现来源 | 说明 |
+|---|---|---|---|---|
+| 8 `write_requirement_doc` | `tool_call` | `write_file` | OpenClaw 内置（[`FileWriteTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/FileWriteTool.cs)） | 原子写入 + 自动创建父目录 + 路径策略沙箱保护 |
+| 12 `validate_cross_refs` | `skill_exec` | `scripts/gate.ps1` | 本仓库 [`subskills/model-validator/`](subskills/model-validator/) | 6 条交叉引用门禁（Python 移植自 OpenClaw [`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)）；退出码非 0 = 步骤失败 |
 
-两个 `tool_call` 步骤均解析为 `ITool.Name` 字面量，OpenClaw 运行时按 Ordinal 严格相等在 `_toolsByName` 字典中查找（[`OpenClawToolExecutor.cs:207`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/OpenClawToolExecutor.cs#L207)）。两个工具都是 OpenClaw 自带，开箱即用——**无需任何额外注册或路径桥接**。
-
-校验器使用 YamlDotNet 的 `YamlStream` 反射无关 API + `JsonDocument` 读取 manifest，输出 `{status, yaml_dir, model_files, checks[], summary}` 结构化结果，AOT/裁剪友好。`IsAotCompatible=true` 的 OpenClaw.Agent 不会因该工具报 IL2026/IL3050。
+- `tool_call` 步骤解析为 `ITool.Name` 字面量，OpenClaw 运行时按 Ordinal 严格相等在 `_toolsByName` 字典中查找（[`OpenClawToolExecutor.cs:207`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/OpenClawToolExecutor.cs#L207)）——`write_file` 开箱即用，无需额外注册。
+- `skill_exec` 步骤把 entrypoint 当子进程执行：entrypoint 必须位于 `skill:` 所指 Skill 根目录内（`subskills/model-validator/`）；`parse_mode: json` 要求 stdout 为合法 JSON；退出码非 0 → 步骤失败（`skill_exec_failed`），`retry` 与失败兜底照常生效。6 条检查语义、输出契约与错误码见 [model-validator SKILL.md](subskills/model-validator/SKILL.md)。
