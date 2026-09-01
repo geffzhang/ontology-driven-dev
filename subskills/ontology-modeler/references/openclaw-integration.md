@@ -17,7 +17,7 @@
 | 注册名（`ITool.Name`） | `"validate_json_ld"` |
 
 > **注意**：该文件当前**不存在**。它是阶段 5.5 路线图中"OpenClaw JSON-LD 校验通道"
-> 的占位实现，对应 [spec § 阶段 2 / 阶段 3 / 阶段 5](../../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md)。
+> 的占位实现，对应 [spec § 阶段 2 / 阶段 3 / 阶段 5](../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md)。
 > 实际编写与提 PR 在 openclaw.net 仓库完成，**本工作树不直接 commit**。
 
 ---
@@ -222,7 +222,7 @@ OpenClaw 运行时按 `ITool.Name` 字面量（`StringComparer.Ordinal` 严格�
 |---|---|
 | 1 | Fork / 拉取 `E:/GitHub/openclaw.net`；新开分支 `feat/validate-jsonld-tool` |
 | 2 | 新建 `src/OpenClaw.Agent/Tools/ValidateJsonLdTool.cs`（参考本文件 § 二、§ 三） |
-| 3 | 添加 dotNetRDF NuGet 依赖（如未引入）：`dotnetrdf >= 2.x`（**注意 AOT 兼容性**，参考 [spec § 九 风险表](../../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#九风险与权衡)） |
+| 3 | 添加 dotNetRDF NuGet 依赖（如未引入）：`dotnetrdf >= 2.x`（**注意 AOT 兼容性**，参考 [spec § 九 风险表](../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#九风险与权衡)） |
 | 4 | 编写 6 条 `check`：`jsonld_parse` / `shacl_basic` / `shacl_m6_stepcount` / `shacl_m3_rule` / `id_consistency` / `manifest_xref` |
 | 5 | 在 `OpenClawToolExecutor` 中**自动注册**（通过 `AddOpenClawTools` 反射枚举 `OpenClaw.Agent.Tools` 命名空间下所有 `ITool` 实现即可；与 `ValidateYamlReferencesTool` 同一注册路径） |
 | 6 | 写单元测试：`tests/OpenClaw.Agent.Tests/Tools/ValidateJsonLdToolTests.cs`，覆盖黄金范例（`m1`/`m5`/`m6`/`m7`）+ 一个 `@context` 不识别场景 |
@@ -266,15 +266,15 @@ OpenClaw 运行时按 `ITool.Name` 字面量（`StringComparer.Ordinal` 严格�
 - MetaSkill 步骤 12 调用：[`../../SKILL.md` § 五](../../SKILL.md#五tool_call-实现)
 - ontology-modeler 子 Skill：[`../SKILL.md` § 九 与 MetaSkill 的衔接](../SKILL.md#九与-metaskill-的衔接)
 - 工具链：[`../tools/README.md`](../tools/README.md)
-- 漂移检测 cron：[`.github/workflows/drift-check.yml`](../../../../.github/workflows/drift-check.yml)（Task 9 产出）
-- 阶段 5.5 收尾报告：[`docs/superpowers/specs/2026-09-01-stage55-report.md`](../../../../docs/superpowers/specs/2026-09-01-stage55-report.md)（Task 12 输出，本任务时未生成）
+- 漂移检测 cron：[`.github/workflows/drift-check.yml`](../../../.github/workflows/drift-check.yml)（Task 9 产出）
+- 阶段 5.5 收尾报告：[`docs/superpowers/specs/2026-09-01-stage55-report.md`](../../../docs/superpowers/specs/2026-09-01-stage55-report.md)（Task 12 输出，本任务时未生成）
 
 ### 上游 spec
 
-- [YAML → JSON-LD 设计 spec § 三 双轨制策略](../../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#三总体方案分层治理--双轨制)
-- [spec § 阶段 2 / 3 / 5 / 6](../../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#七阶段划分)（阶段 2/3/5 定义 ValidateJsonLdTool 的功能需求，阶段 6 是统一收尾）
-- [spec § 九 AOT 风险](../../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#九风险与权衡)
-- [spec § 十一 后续步骤](../../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#十一后续步骤)
+- [YAML → JSON-LD 设计 spec § 三 双轨制策略](../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#三总体方案分层治理--双轨制)
+- [spec § 阶段 2 / 3 / 5 / 6](../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#七阶段划分)（阶段 2/3/5 定义 ValidateJsonLdTool 的功能需求，阶段 6 是统一收尾）
+- [spec § 九 AOT 风险](../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#九风险与权衡)
+- [spec § 十一 后续步骤](../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md#十一后续步骤)
 
 ### openclaw.net 仓库（参考实现）
 
@@ -284,11 +284,11 @@ OpenClaw 运行时按 `ITool.Name` 字面量（`StringComparer.Ordinal` 严格�
 
 ### SDD 流程文档
 
-- 实施计划：[`docs/superpowers/plans/2026-09-01-yaml-to-jsonld-impl.md`](../../../../docs/superpowers/plans/2026-09-01-yaml-to-jsonld-impl.md)
-- Task 11 brief：[`.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-11-brief.md`](../../../../.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-11-brief.md)
-- Task 11 报告：[`.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-11-report.md`](../../../../.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-11-report.md)
-- Task 9 cron 漂移：[`.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-9-brief.md`](../../../../.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-9-brief.md)
-- Task 12 验收（AC5 引用本工具）：[`.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-12-brief.md`](../../../../.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-12-brief.md)
+- 实施计划：[`docs/superpowers/plans/2026-09-01-yaml-to-jsonld-impl.md`](../../../docs/superpowers/plans/2026-09-01-yaml-to-jsonld-impl.md)
+- Task 11 brief：[`.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-11-brief.md`](../../../.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-11-brief.md)
+- Task 11 报告：[`.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-11-report.md`](../../../.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-11-report.md)
+- Task 9 cron 漂移：[`.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-9-brief.md`](../../../.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-9-brief.md)
+- Task 12 验收（AC5 引用本工具）：[`.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-12-brief.md`](../../../.superpowers/sdd/2026-09-01-yaml-to-jsonld-impl/task-12-brief.md)
 
 ---
 
