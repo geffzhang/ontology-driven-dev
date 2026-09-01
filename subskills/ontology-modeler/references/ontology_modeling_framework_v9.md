@@ -2070,3 +2070,46 @@ yaml/
 ### 11.5 引用 spec
 
 - YAML → JSON-LD 迁移 spec：[2026-09-01-yaml-to-jsonld-design.md](../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md)
+
+### 11.6 M2 双层约定（metadata-only JSON-LD + 控制流 YAML）
+
+M2 行为模型是双层协议（two-layer）的典型代表，**JSON-LD 只承载元数据，控制流留在 YAML**。这一边界由 spec § 五 阶段 4 确立，本节给出可操作的字段映射。
+
+#### 11.6.1 字段归属表
+
+| 字段 | 层 | 来源 |
+| --- | --- | --- |
+| `id`, `name`, `alias`, `description` | **JSON-LD** | 元数据，可被 SPARQL 跨文件查询 |
+| `behaviorType`, `objectRef` | **JSON-LD** | 元数据；objectRef 指向 M1 AggregateRoot URN |
+| `requiredPermissions` | **JSON-LD** | 元数据；权限 ID 列表，用于 SPARQL 反查 M5 |
+| `yamlPointer` | **JSON-LD** | 反向引用 `#yaml/m2-behavior-model.yaml#behaviors[<id>]`，让 JSON-LD 节点能反查 YAML 控制流块 |
+| `ownerEntity` | YAML | 关联 aggregate root；元数据但未迁 JSON-LD（暂留 YAML） |
+| `triggerType` | YAML | USER_ACTION / SYSTEM |
+| `preconditions` | YAML | 字符串条件表达式（DSL） |
+| `postconditions` | YAML | 字段赋值规则 |
+| `appliedRules` | YAML | 关联 M3 Rule ID 列表 |
+| `syncTriggers` | YAML | 同步触发（ruleRef + behaviorRef） |
+
+#### 11.6.2 桥接机制
+
+- **JSON-LD → YAML**：`od:yamlPointer` 字段，值为 `#yaml/<yaml-filename>#behaviors[<id>]`。`validate.py` 的 `validate_m2_yaml_jsonld_alignment()` 用此字段校验 YAML 中存在对应 behavior。
+- **YAML → JSON-LD**：`id` 字段（双方用同一 id）；`validate_m2_yaml_jsonld_alignment()` 做双向 ID set 对齐检查。
+
+#### 11.6.3 不迁控制流字段的理由
+
+1. **DSL 不易序列化**：`preconditions` 是字符串条件表达式（如 `contract.status == '草稿' AND 付款比例合计等于 100%`），不是结构化数据；序列化会丢失语义。
+2. **控制流是人类可读的契约**：YAML 字符串 + 注释更适合业务分析师审阅；JSON-LD 是机器可读的索引层。
+3. **避免语义分裂**：同一字段在 JSON-LD 是结构化、在 YAML 是 DSL，会导致双源真相问题。
+4. **postconditions 是字段赋值规则**：JSON-LD 表达字段赋值需引入 SHACL/sparql 函数库，超出 spec § 五 阶段 4 范围。
+
+#### 11.6.4 验证
+
+- `python ../tools/validate.py ../reference-example/` 会自动触发 M2 双层对账（`validate_m2_yaml_jsonld_alignment`）。
+- 漂移检测：见 [drift_check.py](../tools/drift_check.py)。
+- 未来 M2-B 工作：将 `yamlPointer` 从字面量字符串升级为可在 YAML 中加载并定位的结构化反查。
+
+参见：
+
+- spec § 五 阶段 4（M2 双层）
+- [validate.py: validate_m2_yaml_jsonld_alignment](../tools/validate.py)
+- [yaml2m2jsonld.py](../tools/yaml2m2jsonld.py)
