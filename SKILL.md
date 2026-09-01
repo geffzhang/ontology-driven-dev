@@ -501,7 +501,7 @@ composition:
 | 子 Skill | 路径 | 自带资源 |
 |---|---|---|
 | `req-explorer` | `subskills/req-explorer/SKILL.md` | `references/AI需求探索与确认提示词V9.0.md`、`reference-example/合同管理需求规格说明书-V9.md` |
-| `ontology-modeler` | `subskills/ontology-modeler/SKILL.md` | `references/ontology_modeling_framework_v9.md`、`reference-example/`（7 个 YAML + manifest.json） |
+| `ontology-modeler` | `subskills/ontology-modeler/SKILL.md` | `references/ontology_modeling_framework_v9.md`、`reference-example/`（7 个 YAML + manifest.json）、`scripts/`（转换与校验工具链） |
 
 ## 四、失败兜底
 

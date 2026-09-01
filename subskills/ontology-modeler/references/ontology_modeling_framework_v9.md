@@ -2065,7 +2065,7 @@ yaml/
 
 ### 11.4 验证与转换工具
 
-参见 [tools/README.md](../tools/README.md)。
+参见 [tools/README.md](../scripts/README.md)。
 
 ### 11.5 引用 spec
 
@@ -2104,12 +2104,12 @@ M2 行为模型是双层协议（two-layer）的典型代表，**JSON-LD 只承�
 
 #### 11.6.4 验证
 
-- `python ../tools/validate.py ../reference-example/` 会自动触发 M2 双层对账（`validate_m2_yaml_jsonld_alignment`）。
-- 漂移检测：见 [drift_check.py](../tools/drift_check.py)。
+- `python ../scripts/validate.py ../reference-example/` 会自动触发 M2 双层对账（`validate_m2_yaml_jsonld_alignment`）。
+- 漂移检测：见 [drift_check.py](../scripts/drift_check.py)。
 - 未来 M2-B 工作：将 `yamlPointer` 从字面量字符串升级为可在 YAML 中加载并定位的结构化反查。
 
 参见：
 
 - spec § 五 阶段 4（M2 双层）
-- [validate.py: validate_m2_yaml_jsonld_alignment](../tools/validate.py)
-- [yaml2m2jsonld.py](../tools/yaml2m2jsonld.py)
+- [validate.py: validate_m2_yaml_jsonld_alignment](../scripts/validate.py)
+- [yaml2m2jsonld.py](../scripts/yaml2m2jsonld.py)

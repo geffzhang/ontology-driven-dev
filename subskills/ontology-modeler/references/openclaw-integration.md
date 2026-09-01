@@ -265,7 +265,7 @@ OpenClaw 运行时按 `ITool.Name` 字面量（`StringComparer.Ordinal` 严格�
 - 规范文档：[`ontology_modeling_framework_v9.md` § 11](ontology_modeling_framework_v9.md#十一jsonld-序列化约定)
 - MetaSkill 步骤 12 调用：[`../../SKILL.md` § 五](../../SKILL.md#五tool_call-实现)
 - ontology-modeler 子 Skill：[`../SKILL.md` § 九 与 MetaSkill 的衔接](../SKILL.md#九与-metaskill-的衔接)
-- 工具链：[`../tools/README.md`](../tools/README.md)
+- 工具链：[`../scripts/README.md`](../scripts/README.md)
 - 漂移检测 cron：[`.github/workflows/drift-check.yml`](../../../.github/workflows/drift-check.yml)（Task 9 产出）
 - 阶段 5.5 收尾报告：[`docs/superpowers/specs/2026-09-01-stage55-report.md`](../../../docs/superpowers/specs/2026-09-01-stage55-report.md)（Task 12 输出，本任务时未生成）
 

@@ -19,7 +19,7 @@ validate.py — ontology-modeler 统一验证入口
   validate.py <dir> --strict            # 把 SKIPPED 也当失败
 
 示例：
-  $ python tools/validate.py reference-example/
+  $ python scripts/validate.py reference-example/
   [PASS] reference-example/m1-object-model.jsonld
   [PASS] reference-example/m5-actor-model.jsonld
   [PASS] reference-example/m6-flow-model.jsonld

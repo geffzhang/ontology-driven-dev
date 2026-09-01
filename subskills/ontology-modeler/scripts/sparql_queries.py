@@ -10,9 +10,9 @@ sparql_queries.py — 跨 JSON-LD 文件 SPARQL 查询演示
   （m2,m3,mU 暂无 JSON-LD，跳过）
 
 示例：
-  python tools/sparql_queries.py --list
-  python tools/sparql_queries.py --query Q1
-  python tools/sparql_queries.py --all
+  python scripts/sparql_queries.py --list
+  python scripts/sparql_queries.py --query Q1
+  python scripts/sparql_queries.py --all
 """
 
 import argparse

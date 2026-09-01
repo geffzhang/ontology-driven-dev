@@ -37,16 +37,16 @@ description: |
 
 ### 双轨制转换表（YAML → JSON-LD / SHACL）
 
-YAML 是单一事实来源；派生文件一律经 `tools/` 转换器生成。本批次每个模型产出 YAML 后，立即按其行执行派生（见第四节步骤 7）：
+YAML 是单一事实来源；派生文件一律经 `scripts/` 转换器生成。本批次每个模型产出 YAML 后，立即按其行执行派生（见第四节步骤 7）：
 
 | 模型 | 转换器 | 词表 | 派生产出 |
 |---|---|---|---|
-| M1 | `tools/yaml2od_jsonld.py` | od: | `<同名>.jsonld` |
-| M5 | `tools/yaml2od_jsonld.py` | od: | `<同名>.jsonld` |
-| M7 | `tools/yaml2od_jsonld.py` | od: | `<同名>.jsonld` |
-| M2 | `tools/yaml2m2jsonld.py` | od: | `<同名>.jsonld`（仅元数据层；控制流留 YAML，见 §11.6 双层约定） |
-| M3 | `tools/yaml2m3shacl.py` | sh: | `<同名>.shacl.ttl` |
-| M6 | `tools/yaml2m6jsonld.py` | meta: | `<同名>.jsonld`（复用 OpenClaw MetaSkill 词表） |
+| M1 | `scripts/yaml2od_jsonld.py` | od: | `<同名>.jsonld` |
+| M5 | `scripts/yaml2od_jsonld.py` | od: | `<同名>.jsonld` |
+| M7 | `scripts/yaml2od_jsonld.py` | od: | `<同名>.jsonld` |
+| M2 | `scripts/yaml2m2jsonld.py` | od: | `<同名>.jsonld`（仅元数据层；控制流留 YAML，见 §11.6 双层约定） |
+| M3 | `scripts/yaml2m3shacl.py` | sh: | `<同名>.shacl.ttl` |
+| M6 | `scripts/yaml2m6jsonld.py` | meta: | `<同名>.jsonld`（复用 OpenClaw MetaSkill 词表） |
 | MU | — 不迁移（按设计） | — | 仅 YAML；manifest.jsonld 中标记 `od:notMigrated: true` |
 
 ## 三、输入约定
@@ -154,7 +154,7 @@ for model_name in models:
 **并**用转换器同步写出 JSON-LD 顶层入口：
 
 ```bash
-python tools/yaml2manifest.py ../../yaml ../../yaml/manifest.jsonld
+python scripts/yaml2manifest.py ../../yaml ../../yaml/manifest.jsonld
 ```
 
 - `manifest.json`：保留，供 OpenClaw 步骤 12 `validate_yaml_references` 回归校验（跨仓库 AC5）。
@@ -165,12 +165,12 @@ python tools/yaml2manifest.py ../../yaml ../../yaml/manifest.jsonld
 JSON-LD / SHACL 一律由转换器从 YAML 派生，**不得手写**。以下命令以本 SKILL.md 所在目录为工作目录：
 
 ```bash
-python tools/yaml2od_jsonld.py ../../yaml/m1-object-model.yaml      # → m1-object-model.jsonld
-python tools/yaml2od_jsonld.py ../../yaml/m5-actor-model.yaml       # → m5-actor-model.jsonld
-python tools/yaml2m2jsonld.py   ../../yaml/m2-behavior-model.yaml   # → m2-behavior-model.jsonld
-python tools/yaml2m3shacl.py    ../../yaml/m3-rule-model.yaml       # → m3-rule-model.shacl.ttl
-python tools/yaml2m6jsonld.py   ../../yaml/m6-flow-model.yaml       # → m6-flow-model.jsonld
-python tools/yaml2od_jsonld.py  ../../yaml/m7-report-model.yaml     # → m7-report-model.jsonld
+python scripts/yaml2od_jsonld.py ../../yaml/m1-object-model.yaml      # → m1-object-model.jsonld
+python scripts/yaml2od_jsonld.py ../../yaml/m5-actor-model.yaml       # → m5-actor-model.jsonld
+python scripts/yaml2m2jsonld.py   ../../yaml/m2-behavior-model.yaml   # → m2-behavior-model.jsonld
+python scripts/yaml2m3shacl.py    ../../yaml/m3-rule-model.yaml       # → m3-rule-model.shacl.ttl
+python scripts/yaml2m6jsonld.py   ../../yaml/m6-flow-model.yaml       # → m6-flow-model.jsonld
+python scripts/yaml2od_jsonld.py  ../../yaml/m7-report-model.yaml     # → m7-report-model.jsonld
 ```
 
 派生文件与对应 YAML **同目录同命名**（仅扩展名不同）。要点：
@@ -182,8 +182,8 @@ python tools/yaml2od_jsonld.py  ../../yaml/m7-report-model.yaml     # → m7-rep
 ### 步骤 8：一致性自检（交付门禁）
 
 ```bash
-python tools/validate.py ../../yaml/ --format text   # 统一验证：0 failed 才可交付
-python tools/drift_check.py ../../yaml/              # YAML ↔ JSON-LD ID 集漂移检测
+python scripts/validate.py ../../yaml/ --format text   # 统一验证：0 failed 才可交付
+python scripts/drift_check.py ../../yaml/              # YAML ↔ JSON-LD ID 集漂移检测
 ```
 
 - `validate.py` 覆盖：YAML 结构校验、JSON-LD rdflib 解析、M2 YAML↔JSON-LD 双向对齐、M2 `od:yamlPointer` 反向链接解析、manifest 路由。
@@ -233,7 +233,7 @@ python tools/drift_check.py ../../yaml/              # YAML ↔ JSON-LD ID 集�
 5. **M2 USER_ACTION 必须留 MU hook**：即使本批次不产 MU，也要为每个 USER_ACTION 行为预留 `muHook: "<expected-mu-screen-id>"` 注释，步骤 11 据此生成 MU 时填实。
 6. **JSON 输出无多余文字**：最终回复必须是合法 JSON，前后可空一行，但不得有 Markdown 代码块包裹。
 7. **双轨成对交付**：每个迁移模型必须 YAML + JSON-LD（M3 为 SHACL TTL）成对产出；只产其一视为任务失败。MU 例外（按设计不迁移）。
-8. **JSON-LD 只能派生，不得手写**：一律经 `tools/` 转换器生成；需要新字段时改转换器，不改 JSON-LD 输出文件。
+8. **JSON-LD 只能派生，不得手写**：一律经 `scripts/` 转换器生成；需要新字段时改转换器，不改 JSON-LD 输出文件。
 9. **0 failed / 0 drift 才可交付**：`validate.py` 与 `drift_check.py` 均须通过；失败时抛对应错误码（见第八节），不得静默降级为仅 YAML 交付。
 
 ## 七、工具使用清单
@@ -243,9 +243,9 @@ python tools/drift_check.py ../../yaml/              # YAML ↔ JSON-LD ID 集�
 | Read | 读 V9 规范、读基线文档、读上游 YAML | ✅ 必需 |
 | Write | 写 YAML 文件、写 manifest.json | ✅ 必需 |
 | Bash（mkdir）| 首次创建 yaml/ 目录 | ✅ 必需（仅步骤 9） |
-| Bash（python）| 运行 `tools/` 转换器（yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / yaml2manifest） | ✅ 必需（步骤 7） |
-| Bash（python）| 运行 `tools/validate.py` + `tools/drift_check.py` 自检 | ✅ 必需（步骤 8） |
-| Bash（python）| `tools/shacl/run_shacl.py <data> <shape>`（pyshacl 验证，可选深度自检） | 可选 |
+| Bash（python）| 运行 `scripts/` 转换器（yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / yaml2manifest） | ✅ 必需（步骤 7） |
+| Bash（python）| 运行 `scripts/validate.py` + `scripts/drift_check.py` 自检 | ✅ 必需（步骤 8） |
+| Bash（python）| `scripts/shacl/run_shacl.py <data> <shape>`（pyshacl 验证，可选深度自检） | 可选 |
 | Glob | 兜底查找 yaml/ 已有文件 | 可选 |
 | Grep | 在上游 YAML 中查 ID | 可选 |
 
@@ -290,7 +290,7 @@ MetaSkill 步骤 12 (tool_call → validate_yaml_references)
 - 方法论规范：[`references/ontology_modeling_framework_v9.md`](references/ontology_modeling_framework_v9.md)（§ 十一 JSON-LD 序列化协议；§11.6 M2 双层约定）
 - 词表：[`references/od-vocabulary-v9.ttl`](references/od-vocabulary-v9.ttl) + [`references/od-context-v9.jsonld`](references/od-context-v9.jsonld)（冻结的 od: 词表 v9）
 - 黄金范例：[`reference-example/`](reference-example/)（7 个模型 YAML + 5 份 JSON-LD + m3 SHACL + manifest.json + manifest.jsonld，平铺目录）
-- 转换与校验工具：[`tools/`](tools/)（yaml2manifest / yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / validate / drift_check / sparql_queries；SHACL shapes 在 [`tools/shacl/`](tools/shacl/)）
+- 转换与校验工具：[`scripts/`](scripts/)（yaml2manifest / yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / validate / drift_check / sparql_queries；SHACL shapes 在 [`scripts/shacl/`](scripts/shacl/)）
 - 漂移守护 CI：[`../../.github/workflows/drift-check.yml`](../../.github/workflows/drift-check.yml)（每周一 cron：validate + drift + SHACL + SPARQL smoke）
 - 跨仓库集成路线：[`references/openclaw-integration.md`](references/openclaw-integration.md)（OpenClaw `ValidateJsonLdTool.cs` 改造路径 + MetaSkill step 12 wiring）
 - 跨引用校验工具：[`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)（OpenClaw 内置 ITool；步骤 12 通过 `tool: validate_yaml_references` 调用，OpenClaw 运行时按 `ITool.Name` 字面量分发）

@@ -1,4 +1,4 @@
-# ontology-modeler / tools
+# ontology-modeler / scripts
 
 本目录存放 ontology-modeler 子 Skill 的验证与转换工具。**全部为 PoC/阶段工具**，最终集成由各阶段任务实施（见 [spec § 五 路线图](../../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md)）。
 
@@ -22,16 +22,16 @@
 
 ```bash
 # 默认 text 输出（聚合）
-python tools/validate.py reference-example/
+python scripts/validate.py reference-example/
 
 # JSON 输出（agent / IDE 友好）
-python tools/validate.py reference-example/ --format json | jq '.[] | {path, passed}'
+python scripts/validate.py reference-example/ --format json | jq '.[] | {path, passed}'
 
 # 把 SKIPPED（YAML）也当失败处理
-python tools/validate.py reference-example/ --strict
+python scripts/validate.py reference-example/ --strict
 
 # 单文件验证
-python tools/validate.py reference-example/m6-flow-model.jsonld
+python scripts/validate.py reference-example/m6-flow-model.jsonld
 ```
 
 ### 退出码
@@ -91,24 +91,24 @@ pip install pyyaml rdflib pyshacl
 
 ```bash
 # M6 stepCount ≤ 12 校验
-python tools/shacl/run_shacl.py reference-example/m6-flow-model.jsonld tools/shacl/m6_flow_shape.ttl
+python scripts/shacl/run_shacl.py reference-example/m6-flow-model.jsonld scripts/shacl/m6_flow_shape.ttl
 
 # M1 / M5 结构约束
-python tools/shacl/run_shacl.py reference-example/m1-object-model.jsonld tools/shacl/m1_aggregate_shape.ttl
-python tools/shacl/run_shacl.py reference-example/m5-actor-model.jsonld tools/shacl/m5_actor_shape.ttl
+python scripts/shacl/run_shacl.py reference-example/m1-object-model.jsonld scripts/shacl/m1_aggregate_shape.ttl
+python scripts/shacl/run_shacl.py reference-example/m5-actor-model.jsonld scripts/shacl/m5_actor_shape.ttl
 
 # M7 Report 约束（5 报表：LIST_QUERY / DETAIL_QUERY / STATISTICAL_QUERY / REPORT）
-python tools/shacl/run_shacl.py reference-example/m7-report-model.jsonld tools/shacl/m7_report_shape.ttl
+python scripts/shacl/run_shacl.py reference-example/m7-report-model.jsonld scripts/shacl/m7_report_shape.ttl
 
 # M3 rule shape validation
 # - 负面 fixture：混合实例（AGG-CONTRACT-001 通过 / AGG-CONTRACT-002 违反 Rule 2；AGG-RECEIPT-001 通过 / AGG-RECEIPT-002 违反 Rule 7）→ 期望 exit 1，列出 2 条 SPARQL violation
-python tools/shacl/run_shacl.py reference-example/m3-fixture.jsonld reference-example/m3-rule-model.shacl.ttl
+python scripts/shacl/run_shacl.py reference-example/m3-fixture.jsonld reference-example/m3-rule-model.shacl.ttl
 
 # - 正面 fixture：仅含合规实例（AGG-CONTRACT-001 + AGG-RECEIPT-001）→ 期望 exit 0，conforms true
-python tools/shacl/run_shacl.py reference-example/m3-fixture-positive.jsonld reference-example/m3-rule-model.shacl.ttl
+python scripts/shacl/run_shacl.py reference-example/m3-fixture-positive.jsonld reference-example/m3-rule-model.shacl.ttl
 
 # JSON 格式输出（便于 CI 解析）
-python tools/shacl/run_shacl.py <data> <shape> --format json
+python scripts/shacl/run_shacl.py <data> <shape> --format json
 ```
 
 ### M3 fixture 说明
@@ -124,13 +124,13 @@ python tools/shacl/run_shacl.py <data> <shape> --format json
 
 ```bash
 # 列出 5 个可用查询
-python tools/sparql_queries.py --list
+python scripts/sparql_queries.py --list
 
 # 跑单个
-python tools/sparql_queries.py --query Q1
+python scripts/sparql_queries.py --query Q1
 
 # 跑全部
-python tools/sparql_queries.py --all
+python scripts/sparql_queries.py --all
 ```
 
 ### 5 个查询
