@@ -129,7 +129,7 @@ def collect_targets(target: Path) -> list:
     if target.is_file():
         return [target]
     if target.is_dir():
-        files = sorted(p for p in target.iterdir() if p.suffix in (".yaml", ".yml", ".jsonld"))
+        files = sorted(p for p in target.iterdir() if p.suffix in (".yaml", ".yml", ".jsonld") and p.name != "manifest.jsonld")
         manifest = target / "manifest.jsonld"
         if manifest.exists():
             files.append(manifest)
@@ -187,7 +187,7 @@ def main() -> int:
         else:
             continue
         r["path"] = str(f)
-        r["kind"] = f.name
+        r["kind"] = f.suffix
         results.append(r)
 
     if args.format == "json":
