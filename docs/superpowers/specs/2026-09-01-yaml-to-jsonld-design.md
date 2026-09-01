@@ -36,12 +36,12 @@ JSON-LD 作为 W3C 标准的链接数据序列化格式，是上述问题的标�
 - **G3**：M2 行为的元数据层迁 JSON-LD，控制流层（preconditions/postconditions/syncTriggers）保留 YAML 或专用 JSON
 - **G4**：`manifest.json` 升级为 JSON-LD 顶层入口文档（`@context` + `@graph`）
 - **G5**：`ValidateYamlReferencesTool` 增加 JSON-LD 校验通道（不替换 YAML 校验）
-- **G6**：迁移过程不破坏 V9 现有表达力，M2/MU 仍可用 YAML 编辑与 review；M6 用 JSON-LD 表达 MetaSkill 语义，不生成 SKILL.md（OpenClaw 运行时仍按 YAML 路径调度）
+- **G6**：迁移过程不破坏 V9 现有表达力，M2/MU 仍可用 YAML 编辑与 review；M6 用 JSON-LD 表达 MetaSkill 语义，不生成 SKILL.md（**OpenClaw 运行时如何调度 M6 JSON-LD 不属于 ontology-modeler 职责**）
 
 ### 2.2 非目标
 
 - **N1**：不删除任何 YAML 文件——YAML 永远是"人读源"
-- **N2**：M6 流程模型**不另造词表**，而是用 JSON-LD 复用 OpenClaw MetaSkill `composition.steps` 词表（详见 § 四）；**不生成 SKILL.md**——OpenClaw 运行时仍按 YAML 路径调度
+- **N2**：M6 流程模型**不另造词表**，而是用 JSON-LD 复用 OpenClaw MetaSkill `composition.steps` 词表（详见 § 四）；**不生成 SKILL.md**——ontology-modeler 职责止于产出 YAML + JSON-LD，OpenClaw 运行时如何调度 MetaSkill 不在本 spec 职责边界
 - **N3**：MU UI 模型不迁 JSON-LD——A2UI/MCP App 各自规范已是 JSON，再包一层 JSON-LD 是噪声
 - **N4**：本设计**不**引入 OWL 推理——若未来需要，本 spec 之外另行评估
 - **N5**：本设计**不**替代 V9 规范本体——JSON-LD 是序列化约定，不是新框架
@@ -66,7 +66,7 @@ JSON-LD 作为 W3C 标准的链接数据序列化格式，是上述问题的标�
 
 M6 流程不需要新造 JSON-LD 词表，而是在 `@context` 中**复用 MetaSkill 词表 IRI**（`https://openclaw.dev/meta/v1#`，暂定），直接用 MetaSkill 现成谓词（`meta:Step` / `meta:agent` / `meta:user_input` / `meta:dependsOn` 等）表达端到端流。
 
-**M6 输出是一份 JSON-LD 文件**，OpenClaw MetaSkill 运行时仍按原 YAML 路径调度，**不生成 SKILL.md**。这样既复用 MetaSkill 语义（统一理解），又保持 JSON-LD 表达力（机器消费）。
+**M6 输出是一份 JSON-LD 文件**，**不生成 SKILL.md**。这样既复用 MetaSkill 语义（统一理解），又保持 JSON-LD 表达力（机器消费）。ontology-modeler 职责止于产出 YAML + JSON-LD；**如何被 OpenClaw 运行时调度属 OpenClaw 自身职责**，不在本 spec 范围。
 
 ### 4.1 概念映射表（YAML → JSON-LD，复用 MetaSkill 词表）
 
@@ -158,9 +158,9 @@ M6 JSON-LD（**复用 MetaSkill 词表，不生成 SKILL.md**）：
 }
 ```
 
-### 4.3 与 ontology-driven-dev 自带的同构
+### 4.3 与 ontology-driven-dev 自带的同构（仅参考）
 
-ontology-driven-dev 本身就是 12 步 DAG MetaSkill，每个 p1/p2 步骤都用 `depends_on` 串接。M6 黄金范例应直接对照 ontology-driven-dev 的步骤结构编写——但**只复用其语义词表到 JSON-LD**，不复制其 SKILL.md。
+ontology-driven-dev 本身就是 12 步 DAG MetaSkill，每个 p1/p2 步骤都用 `depends_on` 串接。M6 黄金范例可参考其步骤结构编写——但**只复用其语义词表到 JSON-LD**，不复制其 SKILL.md，不参与 OpenClaw 运行时调度（运行时调度属 OpenClaw 自身职责）。
 
 ### 4.4 12 步上限约束（SHACL 校验）
 
@@ -182,7 +182,7 @@ ontology-modeler 阶段 5 应在生成 M6 JSON-LD 后立即执行此 SHACL 校�
 - **人读 YAML**：`yaml/m6-flow-model.yaml`（保留 V9 原 schema，供 review/编辑）
 - **机读 JSON-LD**：`yaml/m6-flow-model.jsonld`（复用 MetaSkill 词表，机器消费）
 
-**不生成 SKILL.md**。OpenClaw MetaSkill 运行时仍按 `yaml/m6-flow-model.yaml` 路径调度；JSON-LD 用于：
+**不生成 SKILL.md**。ontology-modeler 职责止于产出 YAML + JSON-LD；**如何被 OpenClaw 运行时调度不在本 spec 范围**。JSON-LD 的可能用途（由消费方决定，本 spec 不强制）：
 
 1. 跨系统 linked data 交换
 2. SPARQL 查询（M6 流程与 M2/M5/M3 引用关系）
