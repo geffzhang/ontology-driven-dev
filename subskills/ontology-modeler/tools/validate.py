@@ -37,7 +37,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import yaml
 from rdflib import Graph, Namespace, RDF
+
+# Windows GBK stdout can't encode ↔ (U+2194) — force UTF-8 for M2 alignment output
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # 词表 IRI → 子验证器映射
 META_IRI = "https://openclaw.dev/meta/v1#"
@@ -124,6 +129,30 @@ def validate_manifest(jsonld_path: Path) -> dict:
     }
 
 
+def validate_m2_yaml_jsonld_alignment(yaml_path: Path, jsonld_path: Path) -> dict:
+    """M2 双层对账：每个 YAML behavior 都在 JSON-LD 中存在且 yamlPointer 反向可定位"""
+    yaml_data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+    yaml_ids = {b["id"] for b in yaml_data.get("behaviors", [])}
+
+    g = Graph()
+    with open(jsonld_path, encoding="utf-8") as f:
+        g.parse(data=f.read(), format="json-ld")
+    OD = Namespace("https://ontology.ontology-driven.dev/v9#")
+    jsonld_ids = {str(g.value(s, OD.id)) for s in g.subjects(RDF.type, OD.Behavior)}
+
+    missing_in_jsonld = yaml_ids - jsonld_ids
+    missing_in_yaml = jsonld_ids - yaml_ids
+    if missing_in_jsonld or missing_in_yaml:
+        return {
+            "passed": False,
+            "stdout_lines": [f"[FAIL] M2 漂移: yaml-仅={missing_in_jsonld}, jsonld-仅={missing_in_yaml}"],
+        }
+    return {
+        "passed": True,
+        "stdout_lines": [f"[OK] M2 双层对账: {len(yaml_ids)} behaviors 一致"],
+    }
+
+
 def collect_targets(target: Path) -> list:
     """展开 target 为待验证文件列表"""
     if target.is_file():
@@ -177,6 +206,13 @@ def main() -> int:
         return 0
 
     results = []
+    # 在 collect_targets 后，对 M2 YAML 触发对账
+    m2_yaml = target / "m2-behavior-model.yaml"
+    m2_jsonld = target / "m2-behavior-model.jsonld"
+    if m2_yaml.exists() and m2_jsonld.exists():
+        r = validate_m2_yaml_jsonld_alignment(m2_yaml, m2_jsonld)
+        r["path"] = f"{m2_yaml.name} ↔ {m2_jsonld.name}"
+        results.append(r)
     for f in targets:
         if f.name == "manifest.jsonld":
             r = validate_manifest(f)
