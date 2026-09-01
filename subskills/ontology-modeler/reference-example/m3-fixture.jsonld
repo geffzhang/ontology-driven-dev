@@ -1,0 +1,7 @@
+{
+  "@context": {
+    "@vocab": "https://ontology.ontology-driven.dev/v9#",
+    "od": "https://ontology.ontology-driven.dev/v9#"
+  },
+  "@graph": []
+}

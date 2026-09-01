@@ -96,6 +96,9 @@ python tools/shacl/run_shacl.py reference-example/m6-flow-model.jsonld tools/sha
 python tools/shacl/run_shacl.py reference-example/m1-object-model.jsonld tools/shacl/m1_aggregate_shape.ttl
 python tools/shacl/run_shacl.py reference-example/m5-actor-model.jsonld tools/shacl/m5_actor_shape.ttl
 
+# M3 rule shape validation（PoC: 空 fixture → 无 target 命中 → conforms true）
+python tools/shacl/run_shacl.py reference-example/m3-fixture.jsonld reference-example/m3-rule-model.shacl.ttl
+
 # JSON 格式输出（便于 CI 解析）
 python tools/shacl/run_shacl.py <data> <shape> --format json
 ```
@@ -133,6 +136,7 @@ python tools/sparql_queries.py --all
 | `shacl/run_shacl.py` M6 | stepCount ≤ 12 | ✅ conforms |
 | `shacl/run_shacl.py` M1 | 聚合/关联/字典约束 | ✅ conforms |
 | `shacl/run_shacl.py` M5 | 角色/权限约束 | ✅ conforms |
+| `shacl/run_shacl.py` M3 | M3 规则形状（13 条 NodeShape，PoC 空 fixture） | ✅ conforms |
 | `sparql_queries.py` Q1-Q5 | 5 跨文件查询 | ✅ 全部返回结果 |
 
 ## 后续路线（来自 spec）
