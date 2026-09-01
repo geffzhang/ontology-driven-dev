@@ -27,7 +27,6 @@ validate.py — ontology-modeler 统一验证入口
   [SKIP] reference-example/m1-object-model.yaml
   [SKIP] reference-example/m5-actor-model.yaml
   [SKIP] reference-example/m6-flow-model.yaml
-  [SKIP] reference-example/m7-query-model.yaml
   [SKIP] reference-example/m7-report-model.yaml
 """
 

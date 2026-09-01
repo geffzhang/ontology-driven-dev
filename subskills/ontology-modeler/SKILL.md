@@ -33,7 +33,7 @@ description: |
 | 11 (`p2_flows_ui`) | `["M5-perm", "M6", "MU"]` | `yaml/m5-actor-model.yaml`（追加权限块）、`yaml/m6-flow-model.yaml`、`yaml/mu-ui-model.yaml` | 权限 + 流程 + UI |
 
 > **注意**：步骤 11 的 `M5-perm` 与步骤 9 的 `M5` 写入同一文件，权限块追加在角色块之后（不覆盖）。
-> **命名提示**：V9 规范（§ 一）与黄金范例的权威文件名为 `m5-actor` / `m6-flow` / `m7-report`；上游 MetaSkill 文档中出现的 `m5-role` / `m6-process` / `m7-query` 为历史别名，指向同一模型。
+> **命名提示**：V9 规范（§ 一）与黄金范例的权威文件名为 `m5-actor` / `m6-flow` / `m7-report`；既往文档中出现的 `m5-role` / `m6-process` / `m7-query` 为历史别名，指向同一模型。
 
 ### 双轨制转换表（YAML → JSON-LD / SHACL）
 
@@ -228,7 +228,7 @@ python tools/drift_check.py ../../yaml/              # YAML ↔ JSON-LD ID 集�
 
 1. **未读 V9 规范前不得生成**：第一步必须是 Read `references/ontology_modeling_framework_v9.md`。
 2. **不得扩展 `models` 范围**：参数给 `["M1", "M5"]` 时绝不产出 M2/M3/M6/M7/MU。
-3. **M5-perm 与 M5 同文件**：步骤 11 收到 `M5-perm` 时，必须先 Read 已有 `yaml/m5-role-model.yaml`，再追加 permission 块，不得覆盖角色块。
+3. **M5-perm 与 M5 同文件**：步骤 11 收到 `M5-perm` 时，必须先 Read 已有 `yaml/m5-actor-model.yaml`，再追加 permission 块，不得覆盖角色块。
 4. **跨模型 ref 必须真实存在**：写盘前对所有 `*Ref` 字段做一次查表校验，缺失则抛错而非静默留空。
 5. **M2 USER_ACTION 必须留 MU hook**：即使本批次不产 MU，也要为每个 USER_ACTION 行为预留 `muHook: "<expected-mu-screen-id>"` 注释，步骤 11 据此生成 MU 时填实。
 6. **JSON 输出无多余文字**：最终回复必须是合法 JSON，前后可空一行，但不得有 Markdown 代码块包裹。
@@ -275,7 +275,7 @@ MetaSkill 步骤 10 (agent → ontology-modeler, models=[M2,M3,M7])
   ↓ 产出 M2+M3+M7（M3 为 SHACL TTL；M2 为元数据层 JSON-LD）
 
 MetaSkill 步骤 11 (agent → ontology-modeler, models=[M5-perm,M6,MU], write_manifest=true)
-  ↓ with: { prior_models={M1, M2, M3, M5-role, M7} }
+  ↓ with: { prior_models={M1, M2, M3, M5-actor, M7} }
   ↓ 追加 M5 权限块 + 产出 M6+MU + 写 manifest.json + manifest.jsonld
 
 MetaSkill 步骤 12 (tool_call → validate_yaml_references)

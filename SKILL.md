@@ -423,7 +423,7 @@ composition:
           M1: "{{ outputs.p2_objects_roles.model_files.M1 }}"
           M2: "{{ outputs.p2_behaviors_rules.model_files.M2 }}"
           M3: "{{ outputs.p2_behaviors_rules.model_files.M3 }}"
-          M5-role: "{{ outputs.p2_objects_roles.model_files.M5 }}"
+          M5-actor: "{{ outputs.p2_objects_roles.model_files.M5 }}"
           M7: "{{ outputs.p2_behaviors_rules.model_files.M7 }}"
         write_manifest: true
       retry:
