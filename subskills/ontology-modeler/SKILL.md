@@ -292,5 +292,5 @@ MetaSkill 步骤 12 (skill_exec → model-validator scripts/validate_yaml_refs.p
 - 黄金范例：[`reference-example/`](reference-example/)（7 个模型 YAML + 5 份 JSON-LD + m3 SHACL + manifest.json + manifest.jsonld，平铺目录）
 - 转换与校验工具：[`scripts/`](scripts/)（yaml2manifest / yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / validate / drift_check / sparql_queries；SHACL shapes 在 [`scripts/shacl/`](scripts/shacl/)）
 - 漂移守护 CI：[`../../.github/workflows/drift-check.yml`](../../.github/workflows/drift-check.yml)（每周一 cron：validate + drift + SHACL + SPARQL smoke）
-- 跨仓库集成路线：[`references/openclaw-integration.md`](references/openclaw-integration.md)（OpenClaw `ValidateJsonLdTool.cs` 改造路径 + MetaSkill step 12 wiring）
+- 阶段 6 跨仓库收尾：openclaw.net `ValidateJsonLdTool.cs` 待重估（Python 门禁已覆盖其 check 面；本仓库绝不修改 openclaw.net 内任何 .cs 文件）
 - 跨引用门禁：[`../model-validator/`](../model-validator/)（步骤 12 `skill_exec` 的 6 条检查 + 3 条 JSON-LD 门禁；前 6 条语义参考实现是 OpenClaw 内置 ITool [`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)，后 3 条经子进程复用本工具链）

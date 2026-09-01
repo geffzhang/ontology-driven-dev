@@ -12,7 +12,7 @@ description: |
 
 ## 一、检查定义
 
-前 6 条绑定语义 = 原 MetaSkill 步骤 12 `tool_args.checks` 的 6 条 description（已下移至此，本表即权威定义）；字段路径与违规判定参考 OpenClaw [`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)。后 3 条为 JSON-LD 门禁，语义取自 [openclaw-integration.md](../ontology-modeler/references/openclaw-integration.md)（§ 三 词表路由策略）。
+前 6 条绑定语义 = 原 MetaSkill 步骤 12 `tool_args.checks` 的 6 条 description（已下移至此，本表即权威定义）；字段路径与违规判定参考 OpenClaw [`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)。后 3 条为 JSON-LD 门禁，语义来自 ontology-modeler 工具链本身（`validate.py` 词表路由 + M2 双层对账、`scripts/shacl/` 形状对、`drift_check.py` ID 集对称）。
 
 | id | 检查语义 | 读取的 YAML 字段 |
 |---|---|---|
@@ -92,4 +92,3 @@ python scripts/validate_yaml_refs.py <yaml_dir> <manifest> [--format json|text] 
 - C# 参考实现：[`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)
 - 黄金范例：[`../ontology-modeler/reference-example/`](../ontology-modeler/reference-example/)（7 模型 YAML + manifest.json，全部 9 条 PASS）
 - 漂移守护 CI：[`../../.github/workflows/drift-check.yml`](../../.github/workflows/drift-check.yml)
-- 跨仓库集成路线：[`../ontology-modeler/references/openclaw-integration.md`](../ontology-modeler/references/openclaw-integration.md)

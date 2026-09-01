@@ -3,8 +3,8 @@
 validate_yaml_refs.py — model-validator 跨引用门禁（6 条 YAML 检查 + 3 条 JSON-LD 门禁）
 
 把 OpenClaw ValidateYamlReferencesTool.cs 的 6 条检查语义移植为本地脚本，
-并把 openclaw-integration.md § 三 的 JSON-LD 门禁（词表路由解析 / SHACL /
-ID 集对称）一并纳入——后 3 条经子进程复用 ontology-modeler 既有验证器，
+并把 JSON-LD 门禁（词表路由解析 / SHACL / ID 集对称）一并纳入——
+后 3 条经子进程复用 ontology-modeler 既有验证器，
 不在本脚本内重复实现 JSON-LD 逻辑（单一事实来源）。
 供 MetaSkill 步骤 12（skill_exec → scripts/validate_yaml_refs.py）与 CI 调用。
 
@@ -543,7 +543,7 @@ def check_rule_condition_separation(ids, models):
 
 
 # ──────────────────────────────────────────────────────────────
-# Check 7-9: JSON-LD 门禁（openclaw-integration.md § 三）
+# Check 7-9: JSON-LD 门禁（词表路由解析 / SHACL / ID 集对称）
 # 经子进程委托 ontology-modeler 既有验证器；数据/形状缺失 → SKIP（前向兼容）。
 # ──────────────────────────────────────────────────────────────
 
