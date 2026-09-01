@@ -37,6 +37,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from rdflib import Graph, Namespace, RDF
+
 # 词表 IRI → 子验证器映射
 META_IRI = "https://openclaw.dev/meta/v1#"
 OD_IRI = "https://ontology.ontology-driven.dev/v9#"
@@ -100,14 +102,38 @@ def validate_yaml(yaml_path: Path) -> dict:
     }
 
 
+def validate_manifest(jsonld_path: Path) -> dict:
+    """manifest.jsonld 顶层入口验证：rdflib 解析 + 7 个 ModelManifestEntry"""
+    try:
+        with open(jsonld_path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        return {"passed": False, "error": str(e)}
+
+    g = Graph()
+    try:
+        g.parse(data=json.dumps(doc), format="json-ld")
+    except Exception as e:
+        return {"passed": False, "error": f"parse: {e}"}
+
+    OD = Namespace("https://ontology.ontology-driven.dev/v9#")
+    entries = list(g.subjects(RDF.type, OD.ModelManifestEntry))
+    return {
+        "passed": len(entries) == 7,
+        "stdout_lines": [f"[OK] manifest.jsonld: {len(entries)} ModelManifestEntry"],
+    }
+
+
 def collect_targets(target: Path) -> list:
     """展开 target 为待验证文件列表"""
     if target.is_file():
         return [target]
     if target.is_dir():
-        return sorted(
-            [p for p in target.iterdir() if p.suffix in (".yaml", ".yml", ".jsonld")]
-        )
+        files = sorted(p for p in target.iterdir() if p.suffix in (".yaml", ".yml", ".jsonld"))
+        manifest = target / "manifest.jsonld"
+        if manifest.exists():
+            files.append(manifest)
+        return files
     return []
 
 
@@ -152,14 +178,16 @@ def main() -> int:
 
     results = []
     for f in targets:
-        if f.suffix == ".jsonld":
+        if f.name == "manifest.jsonld":
+            r = validate_manifest(f)
+        elif f.suffix == ".jsonld":
             r = validate_jsonld(f)
         elif f.suffix in (".yaml", ".yml"):
             r = validate_yaml(f)
         else:
             continue
         r["path"] = str(f)
-        r["kind"] = f.suffix
+        r["kind"] = f.name
         results.append(r)
 
     if args.format == "json":
