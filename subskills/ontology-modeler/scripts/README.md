@@ -75,6 +75,7 @@ python scripts/merge_rdf.py reference-example/            # → reference-exampl
 python scripts/merge_rdf.py reference-example/ --format json
 ```
 
+- **流程中必做**：ontology-modeler 步骤 7 在六份派生齐备的批次**必须**打包（见 [`SKILL.md`](../SKILL.md) 步骤 7 / 行为纪律 10），输出契约报告 `merged_rdf`。
 - **并图 = 新增产物，不替代**：逐模型 JSON-LD / SHACL、manifest.jsonld 全部原样保留；门禁（`validate.py` / 步骤 12 的 9 条检查）不消费该文件，`validate.py` 收集目标时天然忽略 `.ttl`。
 - **源清单固定**：m1/m2/m3/m5/m6/m7 六个派生文件；`manifest.jsonld`（索引元数据）与 `m3-*-fixture.jsonld`（测试数据）不并入。缺哪个跳过哪个，不报错。
 - **自包含 SHACL bundle**：M3 的形状与其余模型的数据在同一图，拿 merged 文件既当数据图又当形状图可直接 `pyshacl` 校验。
