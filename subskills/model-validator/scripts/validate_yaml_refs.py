@@ -2,20 +2,19 @@
 """
 validate_yaml_refs.py — model-validator 跨引用门禁（6 条 YAML 检查 + 3 条 JSON-LD 门禁）
 
-把 OpenClaw ValidateYamlReferencesTool.cs 的 6 条检查语义移植为本地脚本，
-并把 JSON-LD 门禁（词表路由解析 / SHACL / ID 集对称）一并纳入——
-后 3 条经子进程复用 ontology-modeler 既有验证器，
-不在本脚本内重复实现 JSON-LD 逻辑（单一事实来源）。
+前 6 条跨引用检查的语义定义（权威）见 model-validator SKILL.md 第一节；
+JSON-LD 门禁（词表路由解析 / SHACL / ID 集对称）经子进程复用
+ontology-modeler 既有验证器，不在本脚本内重复实现其逻辑（单一事实来源）。
 供 MetaSkill 步骤 12（skill_exec → scripts/validate_yaml_refs.py）与 CI 调用。
 
-语义基准：根 SKILL.md 步骤 12 的 6 条 description（绑定语义）
-+ ValidateYamlReferencesTool.cs（字段路径 / 违规判定 / 输出信封参考）。
+语义基准：原 MetaSkill 步骤 12 tool_args.checks 的 6 条 description
+（已下移至 model-validator SKILL.md 第一节）。
 黄金范例 subskills/ontology-modeler/reference-example/ 全部 9 条 PASS。
 
 输入：
   validate_yaml_refs.py <yaml_dir> <manifest> [--check ID]... [--format json|text]
 
-输出契约（与 C# 工具对齐）：
+输出契约：
   {
     "status": "OK"|"FAIL"|"ERROR",
     "yaml_dir": ..., "model_files": [...],
@@ -24,7 +23,7 @@ validate_yaml_refs.py — model-validator 跨引用门禁（6 条 YAML 检查 + 
   }
 
 退出码：0 = OK（无 FAIL）；1 = 存在 FAIL；2 = 参数/加载错误（ERROR 信封）。
-manifest 支持两种形态：model_files 数组（黄金范例 / C# 语义）或 models 对象
+manifest 支持两种形态：model_files 数组（黄金范例形态）或 models 对象
 （根 SKILL.md 步骤 6 文档形态，取值作文件名）。
 """
 
@@ -40,7 +39,7 @@ import yaml
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-# 清单文件名 → 规范模型 ID（与 C# ModelKeyByFile 一致；m5-role 为历史别名）
+# 清单文件名 → 规范模型 ID（m5-role 为历史别名）
 MODEL_KEY_BY_FILE = {
     "m1-object-model.yaml": "M1",
     "m2-behavior-model.yaml": "M2",
@@ -52,13 +51,13 @@ MODEL_KEY_BY_FILE = {
     "mu-ui-model.yaml": "MU",
 }
 
-# 正式报表类型（check 5 与 C# FormalReportTypes 一致）
+# 正式报表类型（check 5 判定用）
 FORMAL_REPORT_TYPES = {"LIST_QUERY", "DETAIL_QUERY", "STATISTICAL_QUERY", "REPORT"}
 
-# 条件语气词（check 6 与 C# ConditionalHints 一致，注意 "when "/"if "/"iff " 含尾随空格）
+# 条件语气词（注意 "when "/"if "/"iff " 含尾随空格）
 CONDITIONAL_HINTS = ["如果", "若", "若果", "假如", "when ", "if ", "iff "]
 
-# 检查执行顺序 = C# CheckRegistry 注册顺序 + 3 条 JSON-LD 门禁
+# 检查执行顺序：前 6 条跨引用 + 3 条 JSON-LD 门禁
 CHECK_IDS = [
     "traceability",
     "query_mapping",
@@ -94,7 +93,7 @@ def _as_dict(value):
 
 
 def _get_list(model, key):
-    """model 顶层 key → list[dict]；缺失或形态不符返回 []（对齐 C# GetList）"""
+    """model 顶层 key → list[dict]；缺失或形态不符返回 []"""
     if not isinstance(model, dict):
         return []
     v = model.get(key)
@@ -102,14 +101,14 @@ def _get_list(model, key):
 
 
 def _str(entry, key):
-    """dict 取值转 str；None 返回 None（对齐 C# YamlValue.String 语义）"""
+    """dict 取值转 str；None 返回 None"""
     if not isinstance(entry, dict) or entry.get(key) is None:
         return None
     return str(entry[key])
 
 
 def _str_list(model, key):
-    """顶层 list[str]；缺失/形态不符返回 []（对齐 C# StringList）"""
+    """顶层 list[str]；缺失/形态不符返回 []"""
     if not isinstance(model, dict):
         return []
     v = model.get(key)
@@ -142,7 +141,7 @@ def load_models(yaml_dir: Path, manifest_raw: str):
     except (OSError, json.JSONDecodeError) as e:
         raise LoadError("invalid_manifest", f"manifest parse failed: {e}") from e
 
-    # 双形态兼容：model_files 数组（黄金范例 / C#）或 models 对象（步骤 6 文档）
+    # 双形态兼容：model_files 数组（黄金范例形态）或 models 对象（MetaSkill 步骤 6 文档形态）
     if isinstance(doc, dict) and isinstance(doc.get("model_files"), list):
         model_files = [str(x) for x in doc["model_files"] if str(x).strip()]
     elif isinstance(doc, dict) and isinstance(doc.get("models"), dict):
@@ -186,7 +185,7 @@ class LoadError(Exception):
 
 
 # ──────────────────────────────────────────────────────────────
-# ID 集合提取（对齐 C# ExtractIdSets）
+# ID 集合提取
 # ──────────────────────────────────────────────────────────────
 
 def extract_id_sets(models):
@@ -234,7 +233,7 @@ def _result(cid, status, message, violations=None):
 
 
 def _group_by_value(pairs):
-    """[(key, value)] → {value: [key...]}（对齐 C# GroupKeys 用法）"""
+    """[(key, value)] → {value: [key...]}"""
     groups = {}
     for k, v in pairs:
         groups.setdefault(v, []).append(k)
@@ -680,7 +679,7 @@ CHECK_HANDLERS = {
 
 
 def error_envelope(error_code, message):
-    """与 C# SerializeError 对齐的 ERROR 信封"""
+    """ERROR 信封（status=ERROR + error_code/error）"""
     return {
         "status": "ERROR",
         "yaml_dir": "",
@@ -738,7 +737,7 @@ def main() -> int:
                         results.append(CHECK_HANDLERS[cid](ids, models, ctx))
                     else:
                         results.append(CHECK_HANDLERS[cid](ids, models))
-                except Exception as e:  # 单检查异常不得中断整体（对齐 C# try/catch per check）
+                except Exception as e:  # 单检查异常不得中断整体
                     results.append(_result(
                         cid, "FAIL",
                         f"check '{cid}' threw {type(e).__name__}: {e}"))

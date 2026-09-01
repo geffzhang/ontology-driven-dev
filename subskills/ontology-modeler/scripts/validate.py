@@ -5,7 +5,7 @@ validate.py — ontology-modeler 统一验证入口
 把以下三类验证统一在一个 CLI 入口：
 1. JSON-LD (meta: vocab)  →  validate_m6jsonld.py  (PoC 阶段验证)
 2. JSON-LD (od: vocab)    →  validate_od_jsonld.py  (PoC 阶段验证)
-3. YAML                    →  暂 SKIPPED，交给 OpenClaw ValidateYamlReferencesTool.cs
+3. YAML                    →  暂 SKIPPED，交给 model-validator 门禁（MetaSkill 步骤 12）
 
 设计：
 - 按文件后缀路由（.jsonld / .yaml）
@@ -96,12 +96,12 @@ def validate_jsonld(jsonld_path: Path) -> dict:
 
 
 def validate_yaml(yaml_path: Path) -> dict:
-    """YAML 验证不在 ontology-modeler 职责内，由 ValidateYamlReferencesTool.cs 接管"""
+    """YAML 验证不在 ontology-modeler 职责内，由 model-validator 门禁接管"""
     return {
         "passed": True,
         "skipped": True,
         "stdout_lines": [
-            "[SKIP] YAML 验证归 OpenClaw ValidateYamlReferencesTool.cs（ITool）"
+            "[SKIP] YAML 验证归 model-validator 门禁（MetaSkill 步骤 12）"
         ],
     }
 

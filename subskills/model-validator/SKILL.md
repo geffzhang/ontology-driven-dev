@@ -12,7 +12,7 @@ description: |
 
 ## 一、检查定义
 
-前 6 条绑定语义 = 原 MetaSkill 步骤 12 `tool_args.checks` 的 6 条 description（已下移至此，本表即权威定义）；字段路径与违规判定参考 OpenClaw [`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)。后 3 条为 JSON-LD 门禁，语义来自 ontology-modeler 工具链本身（`validate.py` 词表路由 + M2 双层对账、`scripts/shacl/` 形状对、`drift_check.py` ID 集对称）。
+前 6 条绑定语义 = 原 MetaSkill 步骤 12 `tool_args.checks` 的 6 条 description（已下移至此，本表即权威定义）。后 3 条为 JSON-LD 门禁，语义来自 ontology-modeler 工具链本身（`validate.py` 词表路由 + M2 双层对账、`scripts/shacl/` 形状对、`drift_check.py` ID 集对称）。
 
 | id | 检查语义 | 读取的 YAML 字段 |
 |---|---|---|
@@ -26,7 +26,7 @@ description: |
 | `shacl` | m1/m5/m6/m7 派生 JSON-LD 通过对应 SHACL 形状（M3 形状已派生，实例校验在 CI 黄金范例侧） | 委托 `ontology-modeler/scripts/shacl/run_shacl.py`，形状对见脚本 `SHACL_PAIRS` |
 | `id_consistency` | YAML ↔ JSON-LD ID 集对称（M1 aggregates / M5 actors+roles / M7 query_reports；URN 项目段自动检测） | 委托 `ontology-modeler/scripts/drift_check.py` |
 
-判定细节（前 6 条与 C# 逐条对齐）：
+判定细节（前 6 条）：
 
 - 两侧均无数据 → `SKIP`（如 query_mapping 在 M7/M2 均无映射时）；`SKIP` 不导致 FAIL。
 - 引用存在性按**全部 ID 集合**判定（如 MU 引用的行为只需存在于 M2 全部行为中，不限 USER_ACTION）。
@@ -84,11 +84,10 @@ python scripts/validate_yaml_refs.py <yaml_dir> <manifest> [--format json|text] 
 
 1. **确定性**：本 Skill 无 LLM 步骤，不得在运行时改 YAML——只报告，不修复。
 2. **单一事实来源**：JSON-LD / SHACL / 漂移的校验逻辑只存在于 ontology-modeler 脚本；本脚本经子进程编排，不得在此复制实现（若需新 JSON-LD 检查，先加到 ontology-modeler 工具链，再在此挂编排）。
-3. **9 条语义变更须同步**：根 [`SKILL.md` 步骤 12 注释](../../SKILL.md)、本文件第一节、脚本实现三处必须一致；参考实现 `ValidateYamlReferencesTool.cs` 若更新，须评估是否回移。
+3. **9 条语义变更须同步**：根 [`SKILL.md` 步骤 12 注释](../../SKILL.md)、本文件第一节、脚本实现三处必须一致。
 
 ## 七、参考
 
 - 上游 MetaSkill：[`../../SKILL.md`](../../SKILL.md)（步骤 12 定义）
-- C# 参考实现：[`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)
 - 黄金范例：[`../ontology-modeler/reference-example/`](../ontology-modeler/reference-example/)（7 模型 YAML + manifest.json，全部 9 条 PASS）
 - 漂移守护 CI：[`../../.github/workflows/drift-check.yml`](../../.github/workflows/drift-check.yml)

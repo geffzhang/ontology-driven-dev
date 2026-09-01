@@ -40,12 +40,11 @@ ontology-driven-dev/
             └── manifest.json
 ```
 
-`tool_call` 步骤依赖的工具均为 **OpenClaw 内置 ITool**：
+`tool_call` 步骤依赖的工具为 **OpenClaw 内置 ITool**：
 
 - 步骤 8 → [`FileWriteTool`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/FileWriteTool.cs)（`write_file`）
-- 步骤 12 → [`ValidateYamlReferencesTool`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)（`validate_yaml_references`）
 
-开箱即用，无需额外注册或 Python 桥接。
+步骤 12 → `skill_exec` 调用本仓库 [`subskills/model-validator/`](subskills/model-validator/) 的 Python 门禁（`scripts/validate_yaml_refs.py`，9 条检查），无需注册 ITool。
 
 每个 sub-skill 自带规范与范例，独立可移植。
 
@@ -96,7 +95,7 @@ Skills:
   - 步骤 9：M1 + M5(角色)
   - 步骤 10：M2 + M3 + M7
   - 步骤 11：M5'(权限，追加到 M5 文件) + M6 + MU + manifest.json
-- **一致性门禁**（步骤 12）：可追溯性、M7↔M2 一对一、M6 引用无环等 6 条强制核对，由 OpenClaw 内置 [`ValidateYamlReferencesTool`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs) 实现（`tool: validate_yaml_references`）。
+- **一致性门禁**（步骤 12）：可追溯性、M7↔M2 一对一、M6 引用无环等 6 条强制核对 + 3 条 JSON-LD 门禁，由本仓库 [`subskills/model-validator/`](subskills/model-validator/) 的 Python 门禁（`skill_exec`）实现。
 
 ---
 

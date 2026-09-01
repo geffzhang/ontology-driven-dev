@@ -54,28 +54,17 @@ file.suffix
   └─ 其他          →  忽略
 ```
 
-## 与 OpenClaw ValidateYamlReferencesTool 的关系
+## 与 model-validator 门禁的关系
 
-`ValidateYamlReferencesTool.cs`（[OpenClaw.Agent.Tools](../../../../../../../GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)）是 OpenClaw 运行时内置 ITool，**职责**：
+跨文件 YAML 引用校验（6 条）由 [`subskills/model-validator/`](../../model-validator/) 承担——MetaSkill 步骤 12 经 `skill_exec` 调用其 `scripts/validate_yaml_refs.py`，该脚本又经子进程复用本目录的 `validate.py` / `shacl/run_shacl.py` / `drift_check.py` 完成 JSON-LD 门禁（3 条）。
 
-- 校验 YAML 文件间的 `*Ref` 字段（`roleRef`、`behaviorRef`、`objectRef` 等）
-- 由 MetaSkill step 12 通过 `tool: validate_yaml_references` 调度
-- 实现跨文件 YAML 跨引用一致性
-
-**`validate.py` 的职责**：
-
-- 校验 JSON-LD 文件的 `od:` / `meta:` 词表结构
-- 由 ontology-modeler 本地/CI 调用
-- PoC 阶段；后续可由 ontology-modeler step 12 调用作为前置
-
-**两者关系**：互补，不重叠。
-
-| 维度 | `ValidateYamlReferencesTool` (C#) | `validate.py` (Python) |
-| --- |---| --- |
-| 验证对象 | YAML | JSON-LD |
+| 维度 | model-validator `validate_yaml_refs.py` | 本目录 `validate.py` 等 |
+| --- | --- | --- |
+| 验证对象 | 跨文件 YAML 引用（6 条自研）+ 编排 | JSON-LD 解析 / 词表路由 / SHACL / 漂移 |
 | 词表 | 不绑定词表 | 绑定 od: / meta: 词表 IRI |
-| 调度方 | OpenClaw 运行时（agent step） | 本地 CLI / CI |
-| 仓库 | openclaw.net | ontology-driven-dev |
+| 调度方 | MetaSkill 步骤 12（skill_exec）/ CI | model-validator 子进程 / CI |
+
+两者互补，不重叠；本目录脚本不校验 YAML（`validate.py` 路由为 SKIP）。
 
 ## 依赖
 

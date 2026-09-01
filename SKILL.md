@@ -435,8 +435,8 @@ composition:
 
     - id: validate_cross_refs
       # 9 条检查的语义定义见 subskills/model-validator/SKILL.md 第一节；
-      # 脚本实现 scripts/validate_yaml_refs.py（6 条 Python 移植自 OpenClaw
-      # ValidateYamlReferencesTool.cs + 3 条 JSON-LD 门禁，经子进程委托 ontology-modeler 验证器）。
+      # 脚本实现 scripts/validate_yaml_refs.py（6 条跨引用检查 + 3 条 JSON-LD 门禁，
+      # 经子进程委托 ontology-modeler 验证器）。
       kind: skill_exec
       skill: model-validator
       skill_exec_entrypoint: scripts/validate_yaml_refs.py
@@ -494,7 +494,7 @@ composition:
 |---|---|---|
 | `req-explorer` | `subskills/req-explorer/SKILL.md` | `references/AI需求探索与确认提示词V9.0.md`、`reference-example/合同管理需求规格说明书-V9.md` |
 | `ontology-modeler` | `subskills/ontology-modeler/SKILL.md` | `references/ontology_modeling_framework_v9.md`、`reference-example/`（7 个 YAML + manifest.json）、`scripts/`（转换与校验工具链） |
-| `model-validator` | `subskills/model-validator/SKILL.md` | `scripts/validate_yaml_refs.py`（6 条跨引用门禁，Python 移植自 OpenClaw ValidateYamlReferencesTool.cs + 3 条 JSON-LD 门禁） |
+| `model-validator` | `subskills/model-validator/SKILL.md` | `scripts/validate_yaml_refs.py`（6 条跨引用门禁 + 3 条 JSON-LD 门禁） |
 
 ## 四、失败兜底
 
@@ -522,7 +522,7 @@ composition:
 | Step | 形式 | 名称 | 实现来源 | 说明 |
 |---|---|---|---|---|
 | 8 `write_requirement_doc` | `tool_call` | `write_file` | OpenClaw 内置（[`FileWriteTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/FileWriteTool.cs)） | 原子写入 + 自动创建父目录 + 路径策略沙箱保护 |
-| 12 `validate_cross_refs` | `skill_exec` | `scripts/validate_yaml_refs.py` | 本仓库 [`subskills/model-validator/`](subskills/model-validator/) | 6 条交叉引用门禁（Python 移植自 OpenClaw [`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)）+ 3 条 JSON-LD 门禁（子进程委托 ontology-modeler 验证器）；退出码非 0 = 步骤失败 |
+| 12 `validate_cross_refs` | `skill_exec` | `scripts/validate_yaml_refs.py` | 本仓库 [`subskills/model-validator/`](subskills/model-validator/) | 6 条交叉引用门禁 + 3 条 JSON-LD 门禁（子进程委托 ontology-modeler 验证器）；退出码非 0 = 步骤失败 |
 
 - `tool_call` 步骤解析为 `ITool.Name` 字面量，OpenClaw 运行时按 Ordinal 严格相等在 `_toolsByName` 字典中查找（[`OpenClawToolExecutor.cs:207`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/OpenClawToolExecutor.cs#L207)）——`write_file` 开箱即用，无需额外注册。
 - `skill_exec` 步骤把 entrypoint 当子进程执行：entrypoint 必须位于 `skill:` 所指 Skill 根目录内（`subskills/model-validator/`）；`parse_mode: json` 要求 stdout 为合法 JSON；退出码非 0 → 步骤失败（`skill_exec_failed`），`retry` 与失败兜底照常生效。9 条检查语义、输出契约与错误码见 [model-validator SKILL.md](subskills/model-validator/SKILL.md)。
