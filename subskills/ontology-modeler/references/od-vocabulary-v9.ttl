@@ -1,0 +1,49 @@
+@prefix od: <https://ontology.ontology-driven.dev/v9#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+od:AggregateRoot a rdfs:Class ;
+    rdfs:label "聚合根"@zh ;
+    rdfs:comment "DDD 聚合根节点" .
+
+od:Entity a rdfs:Class ;
+    rdfs:label "实体"@zh .
+
+od:ValueObject a rdfs:Class ;
+    rdfs:label "值对象"@zh .
+
+od:Attribute a rdfs:Class ;
+    rdfs:label "属性"@zh .
+
+od:Invariant a rdfs:Class ;
+    rdfs:label "不变量"@zh .
+
+od:Association a rdfs:Class ;
+    rdfs:label "聚合关联"@zh .
+
+od:DataDictionary a rdfs:Class ;
+    rdfs:label "数据字典"@zh .
+
+od:DictionaryType a rdfs:Class ;
+    rdfs:label "字典类型"@zh .
+
+od:DictionaryItem a rdfs:Class ;
+    rdfs:label "字典项"@zh .
+
+od:Actor a rdfs:Class ;
+    rdfs:label "主体"@zh .
+
+od:Role a rdfs:Class ;
+    rdfs:label "角色"@zh .
+
+od:Permission a rdfs:Class ;
+    rdfs:label "权限"@zh .
+
+od:Behavior a rdfs:Class ;
+    rdfs:label "行为"@zh .
+
+od:Report a rdfs:Class ;
+    rdfs:label "报表"@zh .
+
+od:Rule a rdfs:Class ;
+    rdfs:label "规则"@zh .
