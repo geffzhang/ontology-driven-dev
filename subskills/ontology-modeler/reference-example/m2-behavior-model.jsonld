@@ -1,0 +1,358 @@
+{
+  "@context": {
+    "@vocab": "https://ontology.ontology-driven.dev/v9#",
+    "od": "https://ontology.ontology-driven.dev/v9#",
+    "label": "http://www.w3.org/2000/01/rdf-schema#label"
+  },
+  "@graph": [
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_SaveAsDraft",
+      "@type": "od:Behavior",
+      "od:id": "Contract_SaveAsDraft",
+      "od:name": "保存合同草稿",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_SaveAsDraft]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-CREATE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_Submit",
+      "@type": "od:Behavior",
+      "od:id": "Contract_Submit",
+      "od:name": "提交合同审批",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_Submit]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-CREATE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_Resubmit",
+      "@type": "od:Behavior",
+      "od:id": "Contract_Resubmit",
+      "od:name": "修改并重新提交合同",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_Resubmit]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-CREATE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Invoice_SaveAsDraft",
+      "@type": "od:Behavior",
+      "od:id": "Invoice_SaveAsDraft",
+      "od:name": "保存开票草稿",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Invoice_SaveAsDraft]",
+      "od:requiredPermissions": [
+        "PERM-INVOICE-ISSUE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Invoice_Submit",
+      "@type": "od:Behavior",
+      "od:id": "Invoice_Submit",
+      "od:name": "提交开票审批",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Invoice_Submit]",
+      "od:requiredPermissions": [
+        "PERM-INVOICE-ISSUE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Invoice_Resubmit",
+      "@type": "od:Behavior",
+      "od:id": "Invoice_Resubmit",
+      "od:name": "修改并重新提交开票",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Invoice_Resubmit]",
+      "od:requiredPermissions": [
+        "PERM-INVOICE-ISSUE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Receipt_Record",
+      "@type": "od:Behavior",
+      "od:id": "Receipt_Record",
+      "od:name": "录入合同收款",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Receipt_Record]",
+      "od:requiredPermissions": [
+        "PERM-RECEIPT-RECORD"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Receipt_Reverse",
+      "@type": "od:Behavior",
+      "od:id": "Receipt_Reverse",
+      "od:name": "冲销错误收款",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Receipt_Reverse]",
+      "od:requiredPermissions": [
+        "PERM-RECEIPT-REVERSE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_VoidOrArchive",
+      "@type": "od:Behavior",
+      "od:id": "Contract_VoidOrArchive",
+      "od:name": "作废或归档合同",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_VoidOrArchive]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-VOID"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Invoice_Void",
+      "@type": "od:Behavior",
+      "od:id": "Invoice_Void",
+      "od:name": "作废开票",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Invoice_Void]",
+      "od:requiredPermissions": [
+        "PERM-INVOICE-VOID"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Product_Maintain",
+      "@type": "od:Behavior",
+      "od:id": "Product_Maintain",
+      "od:name": "维护产品信息",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Product_Maintain]",
+      "od:requiredPermissions": [
+        "PERM-MASTERDATA-MAINTAIN"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Customer_Maintain",
+      "@type": "od:Behavior",
+      "od:id": "Customer_Maintain",
+      "od:name": "维护客户信息",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Customer_Maintain]",
+      "od:requiredPermissions": [
+        "PERM-MASTERDATA-MAINTAIN"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Department_Maintain",
+      "@type": "od:Behavior",
+      "od:id": "Department_Maintain",
+      "od:name": "维护部门信息",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Department_Maintain]",
+      "od:requiredPermissions": [
+        "PERM-MASTERDATA-MAINTAIN"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Employee_Maintain",
+      "@type": "od:Behavior",
+      "od:id": "Employee_Maintain",
+      "od:name": "维护人员信息",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Employee_Maintain]",
+      "od:requiredPermissions": [
+        "PERM-MASTERDATA-MAINTAIN"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_QueryList",
+      "@type": "od:Behavior",
+      "od:id": "Contract_QueryList",
+      "od:name": "查询合同列表",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "QUERY",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryList]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-QUERY-LIST",
+        "PERM-CONTRACT-QUERY-LIST-OWN-DEPT"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_QueryDetail",
+      "@type": "od:Behavior",
+      "od:id": "Contract_QueryDetail",
+      "od:name": "查看合同详情",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "QUERY",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryDetail]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-QUERY-DETAIL",
+        "PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_QueryExecutionAnalysis",
+      "@type": "od:Behavior",
+      "od:id": "Contract_QueryExecutionAnalysis",
+      "od:name": "查询合同执行情况分析",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "QUERY",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryExecutionAnalysis]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-QUERY-EXECUTION",
+        "PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_QueryDepartmentSummary",
+      "@type": "od:Behavior",
+      "od:id": "Contract_QueryDepartmentSummary",
+      "od:name": "查询部门合同统计分析",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "QUERY",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryDepartmentSummary]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-QUERY-DEPT-SUMMARY",
+        "PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_QueryInvoicedUnreceived",
+      "@type": "od:Behavior",
+      "od:id": "Contract_QueryInvoicedUnreceived",
+      "od:name": "查询已开票未收款合同",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "QUERY",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryInvoicedUnreceived]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-QUERY-UNRECEIVED",
+        "PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_ApproveFinance",
+      "@type": "od:Behavior",
+      "od:id": "Contract_ApproveFinance",
+      "od:name": "财务经理审批合同",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_ApproveFinance]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-APPROVE-FINANCE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_ApproveGeneralManager",
+      "@type": "od:Behavior",
+      "od:id": "Contract_ApproveGeneralManager",
+      "od:name": "总经理审批合同",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_ApproveGeneralManager]",
+      "od:requiredPermissions": [
+        "PERM-CONTRACT-APPROVE-LARGE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Invoice_ApproveFinance",
+      "@type": "od:Behavior",
+      "od:id": "Invoice_ApproveFinance",
+      "od:name": "财务经理审批开票",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Invoice_ApproveFinance]",
+      "od:requiredPermissions": [
+        "PERM-INVOICE-APPROVE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:PaymentStage_UpdateInvoiceStatus",
+      "@type": "od:Behavior",
+      "od:id": "PaymentStage_UpdateInvoiceStatus",
+      "od:name": "更新付款阶段开票状态",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[PaymentStage_UpdateInvoiceStatus]",
+      "od:requiredPermissions": []
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Invoice_UpdateReceiptStatus",
+      "@type": "od:Behavior",
+      "od:id": "Invoice_UpdateReceiptStatus",
+      "od:name": "更新开票收款状态",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Invoice_UpdateReceiptStatus]",
+      "od:requiredPermissions": []
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M2:Contract_UpdateSettlementStatus",
+      "@type": "od:Behavior",
+      "od:id": "Contract_UpdateSettlementStatus",
+      "od:name": "更新合同结清状态",
+      "od:alias": "",
+      "od:description": "",
+      "od:behaviorType": "COMMAND",
+      "od:objectRef": "",
+      "od:yamlPointer": "#yaml/m2-behavior-model.yaml#behaviors[Contract_UpdateSettlementStatus]",
+      "od:requiredPermissions": []
+    }
+  ]
+}
