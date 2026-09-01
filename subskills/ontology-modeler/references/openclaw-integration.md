@@ -108,7 +108,7 @@ public interface ITool
 |---|---|---|---|
 | M1 对象 | `od` = `https://ontology.ontology-driven.dev/v9#` | `od:` | `od:AggregateRootShape` + `od:DataDictionaryShape` |
 | M5 主体 | `od` = `.../v9#` | `od:` | `od:ActorShape` + `od:RoleShape` + `od:PermissionShape` |
-| M2 行为元数据 | `od` = `.../v9#` | `od:` | `od:BehaviorShape`（仅元数据层，控制流保留 YAML） |
+| M2 行为元数据 | `od` = `.../v9#` | `od:` | 暂无独立 shape：由 M2 双层对账承担（`validate_m2_yaml_jsonld_alignment`：ID 集一致 + `od:yamlPointer` 反向链接）；shape 待补 |
 | M3 规则 SHACL | `sh` = `http://www.w3.org/ns/shacl#`（顶层 Shape 文件） | `sh:` | 内置 `m3-rule-model.shacl.ttl` |
 | M6 流程 | `meta` = `https://openclaw.dev/meta/v1#` | `meta:` | `meta:FlowShape`（含 `meta:hasStep` ≤ 12 硬约束） |
 | M7 报表 | `od` = `.../v9#` | `od:` | `od:ReportShape` |
@@ -131,7 +131,7 @@ for each jsonLdFile in jsonLdFiles:
     elif ctx.od == OD_IRI:
         # 按文件名映射到对应 od: shape
         vocab = "od"
-        shape = filename → od: shape (m1→aggregate, m5→actor, m7→report, m2→behavior)
+        shape = filename → od: shape (m1→aggregate, m5→actor, m7→report；m2 暂无 shape，走双层对账旁路)
     else:
         return ERROR "unrecognized vocab"
     run_shacl(jsonld, shape)
@@ -251,7 +251,7 @@ OpenClaw 运行时按 `ITool.Name` 字面量（`StringComparer.Ordinal` 严格�
 |---|---|
 | dotNetRDF AOT 兼容性 | 参考现有 `IsAotCompatible=true` 设计，使用反射无关 API；CI 跑 `PublishTrimmed` 烟雾 |
 | `@context` IRI 漂移 | 词表 IRI 集中定义在本仓库 `references/od-context-v9.jsonld`，openclaw.net 端用常量字符串匹配 |
-| SHACL shape 漂移 | 形状文件随 JSON-LD 文件同目录存放（`reference-example/m{N}-*.shacl.ttl`），工具按文件名匹配 |
+| SHACL shape 漂移 | 形状文件集中存放于 `scripts/shacl/`（m1_aggregate_shape / m5_actor_shape / m6_flow_shape / m7_report_shape），CI 按文件名匹配；M3 用 `reference-example/m3-rule-model.shacl.ttl`（转换器派生产物） |
 | 双重注册风险 | 复用 `ValidateYamlReferencesTool` 的注册路径，不引入新的 `AddOpenClawTools` |
 
 ---
