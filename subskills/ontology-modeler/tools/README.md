@@ -96,12 +96,25 @@ python tools/shacl/run_shacl.py reference-example/m6-flow-model.jsonld tools/sha
 python tools/shacl/run_shacl.py reference-example/m1-object-model.jsonld tools/shacl/m1_aggregate_shape.ttl
 python tools/shacl/run_shacl.py reference-example/m5-actor-model.jsonld tools/shacl/m5_actor_shape.ttl
 
-# M3 rule shape validation（PoC: 空 fixture → 无 target 命中 → conforms true）
+# M3 rule shape validation
+# - 负面 fixture：混合实例（AGG-CONTRACT-001 通过 / AGG-CONTRACT-002 违反 Rule 2；AGG-RECEIPT-001 通过 / AGG-RECEIPT-002 违反 Rule 7）→ 期望 exit 1，列出 2 条 SPARQL violation
 python tools/shacl/run_shacl.py reference-example/m3-fixture.jsonld reference-example/m3-rule-model.shacl.ttl
+
+# - 正面 fixture：仅含合规实例（AGG-CONTRACT-001 + AGG-RECEIPT-001）→ 期望 exit 0，conforms true
+python tools/shacl/run_shacl.py reference-example/m3-fixture-positive.jsonld reference-example/m3-rule-model.shacl.ttl
 
 # JSON 格式输出（便于 CI 解析）
 python tools/shacl/run_shacl.py <data> <shape> --format json
 ```
+
+### M3 fixture 说明
+
+| Fixture | 内容 | 覆盖规则 | 期望结果 |
+| --- | --- | --- | --- |
+| `m3-fixture.jsonld` | AGG-CONTRACT-001（合规）+ AGG-CONTRACT-002（违反 Rule 2 status=草稿）+ AGG-RECEIPT-001（合规）+ AGG-RECEIPT-002（违反 Rule 7 validReceiptCount=0） | Rule 1, 2, 7 | exit 1，2 violation |
+| `m3-fixture-positive.jsonld` | AGG-CONTRACT-001（合规）+ AGG-RECEIPT-001（合规） | Rule 1, 2, 7 | exit 0 conforms |
+
+**关于 3/13 规则**：M3-A 仅把 3 条单实体规则（RULE-CONTRACT-APPROVAL-LEVEL / RULE-CONTRACT-INVOICE-ELIGIBLE / RULE-INVOICE-VOID-ELIGIBLE）翻译成可执行的 `sh:sparql`；其余 10 条混合实体规则（如 RULE-PAYSTAGE-REMAIN-QUOTA 等）按设计降级，仅产出 `rdfs:comment` + `sh:property` 形状，不参与本轮 SPARQL 校验。
 
 ## SPARQL 查询演示
 
@@ -136,7 +149,7 @@ python tools/sparql_queries.py --all
 | `shacl/run_shacl.py` M6 | stepCount ≤ 12 | ✅ conforms |
 | `shacl/run_shacl.py` M1 | 聚合/关联/字典约束 | ✅ conforms |
 | `shacl/run_shacl.py` M5 | 角色/权限约束 | ✅ conforms |
-| `shacl/run_shacl.py` M3 | M3 规则形状（13 条 NodeShape，PoC 空 fixture） | ✅ conforms |
+| `shacl/run_shacl.py` M3 | M3 SHACL: 3/13 rules translated cleanly (single-entity Contract); 10/13 mixed-entity rules emit rdfs:comment + property shapes only (degraded by design) | ✅ mixed + positive fixtures conform/violate as expected |
 | `sparql_queries.py` Q1-Q5 | 5 跨文件查询 | ✅ 全部返回结果 |
 
 ## 后续路线（来自 spec）
