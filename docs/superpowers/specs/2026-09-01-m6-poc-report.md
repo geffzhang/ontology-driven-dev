@@ -208,6 +208,7 @@ PASS: PoC validation passed
 ```
 
 v2 验证脚本额外检查：
+
 - 每条 route 的 `meta:target` 在同一 flow 的 hasStep 中存在
 - 每条 route 的 `meta:isDefault` 至多为 1（业务约束：分支路由最多一个默认）
 
