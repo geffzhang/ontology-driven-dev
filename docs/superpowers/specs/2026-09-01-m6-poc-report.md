@@ -1,6 +1,7 @@
 ---
 title: M6 YAML → JSON-LD (meta: 词表复用) PoC 报告
 status: completed
+version: 2.0  # PoC v2: GATEWAY routes 嵌套表达
 date: 2026-09-01
 related:
   - 2026-09-01-yaml-to-jsonld-design.md
@@ -171,30 +172,46 @@ PASS: PoC validation passed
 
 `nextActivities`（出向）→ `meta:dependsOn`（入向）反转逻辑无歧义；rdflib 解析 + 目标存在性校验 100% 通过。
 
-### 6.4 GATEWAY branches 简化策略 ⚠️ 待优化
+### 6.4 GATEWAY branches → meta:routes 嵌套 ✅ v2 已实现
 
-PoC 把 GATEWAY 的 `branches[]` 简化为 `meta:outputChoices: [...]`（字符串列表）。这丢失了：
-- 每个 choice 与 target 的映射
-- `conditionExpression` 与 `ruleRef` 的区分
-- `isDefault` 信息
+**v1 简化策略**（已弃用）：把 GATEWAY 的 `branches[]` 简化为 `meta:outputChoices: [...]`（字符串列表）。这丢失了 target/isDefault/conditionExpression 与 choice 的关联。
 
-**生产级需要**：用嵌套对象替代字符串列表，例如：
+**v2 完整嵌套策略**（当前实现）：每条 branch 独立成 `meta:Route` 节点：
 
 ```json
 {
+  "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04",
   "@type": "meta:Step",
   "meta:id": "A04",
   "meta:kind": "llm_classify",
   "meta:routes": [
-    { "meta:choice": "APPROVE", "meta:target": "A05", "meta:isDefault": true,
-      "meta:conditionExpression": "approval.outcome == 'APPROVE'" },
-    { "meta:choice": "REJECT", "meta:target": "A02",
-      "meta:conditionExpression": "approval.outcome == 'REJECT'" }
-  ]
+    {
+      "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-0",
+      "@type": "meta:Route",
+      "meta:choice": "APPROVE",
+      "meta:target": "A05",
+      "meta:isDefault": true,
+      "meta:branchName": "审批通过",
+      "meta:conditionExpression": "approval.outcome == 'APPROVE'"
+    },
+    { "@id": "...:A04-route-1", "@type": "meta:Route",
+      "meta:choice": "REJECT", "meta:target": "A02", "meta:isDefault": false,
+      "meta:branchName": "驳回后修改重提",
+      "meta:conditionExpression": "approval.outcome == 'REJECT'" },
+    { "@id": "...:A04-route-2", "@type": "meta:Route",
+      "meta:choice": "TERMINATE", "meta:target": "A09", "meta:isDefault": false,
+      "meta:branchName": "终止且不再提交",
+      "meta:conditionExpression": "approval.outcome == 'TERMINATE'" }
+  ],
+  "meta:dependsOn": ["A03"]
 }
 ```
 
-但这是优化项，不影响 PoC 可行性结论。
+v2 验证脚本额外检查：
+- 每条 route 的 `meta:target` 在同一 flow 的 hasStep 中存在
+- 每条 route 的 `meta:isDefault` 至多为 1（业务约束：分支路由最多一个默认）
+
+黄金范例 4 个 flow 全部通过。
 
 ### 6.5 12 步上限 ✅ 黄金范例全部通过
 
@@ -204,7 +221,7 @@ PoC 把 GATEWAY 的 `branches[]` 简化为 `meta:outputChoices: [...]`（字符�
 
 | 未覆盖项 | 影响 | 下一步 |
 |---|---|---|
-| GATEWAY branches 完整表达（含 target/condition/default） | GATEWAY 节点语义不完整 | 阶段 5 实施时嵌套 routes |
+| ~~GATEWAY branches 完整表达~~ | ✅ v2 已实现嵌套 routes | — |
 | SHACL `meta:FlowShape` 实际校验（`pyshacl`） | 12 步上限未通过标准工具验证 | 阶段 5 集成 `pyshacl` |
 | SPARQL 查询演示（M6 ↔ M2/M5 引用关系） | 未证明跨模型查询能力 | 阶段 5 演示查询 |
 | 多 domain 抽象（DOMAIN_SLUG 硬编码） | 单一域，跨域需配置 | 阶段 2 参数化 |
@@ -220,8 +237,15 @@ PoC 把 GATEWAY 的 `branches[]` 简化为 `meta:outputChoices: [...]`（字符�
 3. ✅ rdflib 7.x 标准 JSON-LD Processor 可解析
 4. ✅ stepCount ≤ 12 MetaSkill 约束在黄金范例中成立
 5. ✅ dependsOn 引用一致性校验通过
+6. ✅ GATEWAY routes 嵌套表达（v2）携带 target/isDefault/conditionExpression 完整语义
 
-**风险**：GATEWAY branches 简化策略需要在阶段 5 用嵌套 routes 表达完整语义。
+**剩余风险**：
+
+- ⚠️ SHACL 实际校验未实施（仍待 pyshacl 集成）
+- ⚠️ SPARQL 跨模型查询未演示
+- ⚠️ 多 domain 抽象未参数化
+
+**结论**：阶段 5 已具备直接落地的预演基础。
 
 ## 九、产出物清单
 

@@ -59,7 +59,6 @@ def main():
             step_id = g.value(step, META.id)
             deps = list(g.objects(step, META.dependsOn))
             for dep in deps:
-                # dep 是字符串（activityId），需要检查 flow 的 hasStep 中是否存在
                 target = None
                 for s in steps:
                     if str(g.value(s, META.id)) == str(dep):
@@ -69,12 +68,34 @@ def main():
                     print(f"[FAIL] {step_id}.dependsOn -> '{dep}' NOT FOUND")
                     all_ok = False
 
+        # GATEWAY routes: target 引用存在 + 仅一个 isDefault=true
+        for step in steps:
+            step_id = g.value(step, META.id)
+            routes = list(g.objects(step, META.routes))
+            if not routes:
+                continue
+            default_count = 0
+            for route in routes:
+                target = g.value(route, META.target)
+                if target:
+                    target_exists = any(str(g.value(s, META.id)) == str(target) for s in steps)
+                    if not target_exists:
+                        print(f"[FAIL] {step_id}.routes.target -> '{target}' NOT FOUND")
+                        all_ok = False
+                if g.value(route, META.isDefault):
+                    default_count += 1
+            if default_count > 1:
+                print(f"[FAIL] {step_id}.routes has {default_count} defaults (must be 0 or 1)")
+                all_ok = False
+            elif default_count == 0:
+                print(f"[WARN] {step_id}.routes has no default route")
+
     print()
     if all_ok:
-        print("PASS: PoC validation passed")
+        print("PASS: PoC v2 validation passed")
         return 0
     else:
-        print("FAIL: PoC validation failed")
+        print("FAIL: PoC v2 validation failed")
         return 1
 
 

@@ -87,7 +87,7 @@ def convert_activity(flow_id: str, activity: dict, deps_map: dict) -> dict:
         step["meta:enum"] = activity["approvalOutcomes"]
 
     if activity["activityType"] == "GATEWAY":
-        step["meta:outputChoices"] = extract_gateway_choices(activity)
+        step["meta:routes"] = convert_gateway_routes(flow_id, aid, activity)
 
     if deps_map.get(aid):
         step["meta:dependsOn"] = deps_map[aid]
@@ -95,22 +95,45 @@ def convert_activity(flow_id: str, activity: dict, deps_map: dict) -> dict:
     return step
 
 
-def extract_gateway_choices(activity: dict) -> list:
-    """从 GATEWAY 的 branches 提取 outputChoices"""
-    choices = []
-    for b in activity.get("branches", []) or []:
-        if b.get("conditionExpression"):
-            expr = b["conditionExpression"]
-            if "==" in expr:
-                val = expr.split("==", 1)[1].strip().strip("'\"")
-                choices.append(val)
-            else:
-                choices.append(b.get("branchName", expr))
-        elif b.get("ruleRef"):
-            choices.append(b["ruleRef"])
-        else:
-            choices.append(b.get("branchName", "default"))
-    return choices
+def extract_choice_label(branch: dict, idx: int) -> str:
+    """从 branch 提取 meta:choice 标签"""
+    if branch.get("conditionExpression"):
+        expr = branch["conditionExpression"]
+        if "==" in expr:
+            return expr.split("==", 1)[1].strip().strip("'\"")
+        return expr
+    if branch.get("ruleRef"):
+        return branch["ruleRef"]
+    return branch.get("branchName", f"branch_{idx}")
+
+
+def convert_gateway_routes(flow_id: str, aid: str, activity: dict) -> list:
+    """
+    GATEWAY branches → meta:routes 嵌套数组
+
+    每条 route 携带:
+    - meta:choice: 分支标签
+    - meta:target: 目标 activityId
+    - meta:isDefault: 是否默认分支
+    - meta:conditionExpression 或 meta:ruleRef: 触发条件
+    - meta:branchName: 人类可读名
+    """
+    routes = []
+    for idx, b in enumerate(activity.get("branches", []) or []):
+        route = {
+            "@id": step_iri(flow_id, f"{aid}-route-{idx}"),
+            "@type": "meta:Route",
+            "meta:choice": extract_choice_label(b, idx),
+            "meta:target": b.get("targetActivity", ""),
+            "meta:isDefault": bool(b.get("isDefault", False)),
+            "meta:branchName": b.get("branchName", ""),
+        }
+        if b.get("conditionExpression") is not None:
+            route["meta:conditionExpression"] = b["conditionExpression"]
+        if b.get("ruleRef"):
+            route["meta:ruleRef"] = ref_iri("M3", b["ruleRef"])
+        routes.append(route)
+    return routes
 
 
 # ── 单个 flow → meta:Flow ────────────────────────────────────────────

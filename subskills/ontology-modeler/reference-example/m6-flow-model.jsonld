@@ -68,10 +68,34 @@
           "meta:id": "A04",
           "meta:label": "审批结果判断",
           "meta:kind": "llm_classify",
-          "meta:outputChoices": [
-            "APPROVE",
-            "REJECT",
-            "TERMINATE"
+          "meta:routes": [
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-0",
+              "@type": "meta:Route",
+              "meta:choice": "APPROVE",
+              "meta:target": "A05",
+              "meta:isDefault": true,
+              "meta:branchName": "审批通过",
+              "meta:conditionExpression": "approval.outcome == 'APPROVE'"
+            },
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-1",
+              "@type": "meta:Route",
+              "meta:choice": "REJECT",
+              "meta:target": "A02",
+              "meta:isDefault": false,
+              "meta:branchName": "驳回后修改重提",
+              "meta:conditionExpression": "approval.outcome == 'REJECT'"
+            },
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-2",
+              "@type": "meta:Route",
+              "meta:choice": "TERMINATE",
+              "meta:target": "A09",
+              "meta:isDefault": false,
+              "meta:branchName": "终止且不再提交",
+              "meta:conditionExpression": "approval.outcome == 'TERMINATE'"
+            }
           ],
           "meta:dependsOn": [
             "A03"
@@ -91,9 +115,24 @@
           "meta:id": "A06",
           "meta:label": "合同结清判断",
           "meta:kind": "llm_classify",
-          "meta:outputChoices": [
-            "RULE-CONTRACT-SETTLEMENT",
-            "未结清，继续开票收款"
+          "meta:routes": [
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A06-route-0",
+              "@type": "meta:Route",
+              "meta:choice": "RULE-CONTRACT-SETTLEMENT",
+              "meta:target": "A07",
+              "meta:isDefault": false,
+              "meta:branchName": "满足结清条件",
+              "meta:ruleRef": "urn:od:contract-mgmt:M3:RULE-CONTRACT-SETTLEMENT"
+            },
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A06-route-1",
+              "@type": "meta:Route",
+              "meta:choice": "未结清，继续开票收款",
+              "meta:target": "A05",
+              "meta:isDefault": true,
+              "meta:branchName": "未结清，继续开票收款"
+            }
           ],
           "meta:dependsOn": [
             "A05"
@@ -194,10 +233,34 @@
           "meta:id": "B04",
           "meta:label": "审批结果判断",
           "meta:kind": "llm_classify",
-          "meta:outputChoices": [
-            "APPROVE",
-            "REJECT",
-            "TERMINATE"
+          "meta:routes": [
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04-route-0",
+              "@type": "meta:Route",
+              "meta:choice": "APPROVE",
+              "meta:target": "B05",
+              "meta:isDefault": true,
+              "meta:branchName": "审批通过",
+              "meta:conditionExpression": "approval.outcome == 'APPROVE'"
+            },
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04-route-1",
+              "@type": "meta:Route",
+              "meta:choice": "REJECT",
+              "meta:target": "B02",
+              "meta:isDefault": false,
+              "meta:branchName": "驳回后修改重提",
+              "meta:conditionExpression": "approval.outcome == 'REJECT'"
+            },
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04-route-2",
+              "@type": "meta:Route",
+              "meta:choice": "TERMINATE",
+              "meta:target": "B09",
+              "meta:isDefault": false,
+              "meta:branchName": "终止且不再提交",
+              "meta:conditionExpression": "approval.outcome == 'TERMINATE'"
+            }
           ],
           "meta:dependsOn": [
             "B03"
@@ -240,9 +303,24 @@
           "meta:id": "B08",
           "meta:label": "开票是否全部收齐",
           "meta:kind": "llm_classify",
-          "meta:outputChoices": [
-            "RULE-INVOICE-RECEIPT-STATUS",
-            "未收齐，继续收款"
+          "meta:routes": [
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B08-route-0",
+              "@type": "meta:Route",
+              "meta:choice": "RULE-INVOICE-RECEIPT-STATUS",
+              "meta:target": "B09",
+              "meta:isDefault": false,
+              "meta:branchName": "已全部收齐",
+              "meta:ruleRef": "urn:od:contract-mgmt:M3:RULE-INVOICE-RECEIPT-STATUS"
+            },
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B08-route-1",
+              "@type": "meta:Route",
+              "meta:choice": "未收齐，继续收款",
+              "meta:target": "B06",
+              "meta:isDefault": true,
+              "meta:branchName": "未收齐，继续收款"
+            }
           ],
           "meta:dependsOn": [
             "B07"
@@ -311,9 +389,25 @@
           "meta:id": "P03",
           "meta:label": "财务审批结果判断",
           "meta:kind": "llm_classify",
-          "meta:outputChoices": [
-            "REJECT",
-            "APPROVE"
+          "meta:routes": [
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P03-route-0",
+              "@type": "meta:Route",
+              "meta:choice": "REJECT",
+              "meta:target": "P08",
+              "meta:isDefault": false,
+              "meta:branchName": "驳回",
+              "meta:conditionExpression": "approval.outcome == 'REJECT'"
+            },
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P03-route-1",
+              "@type": "meta:Route",
+              "meta:choice": "APPROVE",
+              "meta:target": "P04",
+              "meta:isDefault": true,
+              "meta:branchName": "通过",
+              "meta:conditionExpression": "approval.outcome == 'APPROVE'"
+            }
           ],
           "meta:dependsOn": [
             "P02"
@@ -325,9 +419,24 @@
           "meta:id": "P04",
           "meta:label": "大额合同判断",
           "meta:kind": "llm_classify",
-          "meta:outputChoices": [
-            "RULE-CONTRACT-APPROVAL-LEVEL",
-            "普通金额合同"
+          "meta:routes": [
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P04-route-0",
+              "@type": "meta:Route",
+              "meta:choice": "RULE-CONTRACT-APPROVAL-LEVEL",
+              "meta:target": "P05",
+              "meta:isDefault": false,
+              "meta:branchName": "金额大于等于100万元",
+              "meta:ruleRef": "urn:od:contract-mgmt:M3:RULE-CONTRACT-APPROVAL-LEVEL"
+            },
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P04-route-1",
+              "@type": "meta:Route",
+              "meta:choice": "普通金额合同",
+              "meta:target": "P06",
+              "meta:isDefault": true,
+              "meta:branchName": "普通金额合同"
+            }
           ]
         },
         {
@@ -427,9 +536,25 @@
           "meta:id": "Q03",
           "meta:label": "审批结果判断",
           "meta:kind": "llm_classify",
-          "meta:outputChoices": [
-            "APPROVE",
-            "REJECT"
+          "meta:routes": [
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q03-route-0",
+              "@type": "meta:Route",
+              "meta:choice": "APPROVE",
+              "meta:target": "Q04",
+              "meta:isDefault": true,
+              "meta:branchName": "通过",
+              "meta:conditionExpression": "approval.outcome == 'APPROVE'"
+            },
+            {
+              "@id": "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q03-route-1",
+              "@type": "meta:Route",
+              "meta:choice": "REJECT",
+              "meta:target": "Q05",
+              "meta:isDefault": false,
+              "meta:branchName": "驳回",
+              "meta:conditionExpression": "approval.outcome == 'REJECT'"
+            }
           ],
           "meta:dependsOn": [
             "Q02"
