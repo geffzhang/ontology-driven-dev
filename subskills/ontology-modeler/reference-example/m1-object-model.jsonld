@@ -7,7 +7,25 @@
     "xsd": "http://www.w3.org/2001/XMLSchema#",
     "label": "rdfs:label",
     "type": "@type",
-    "id": "@id"
+    "id": "@id",
+    "od:sourceAggregate": {
+      "@type": "@id"
+    },
+    "od:targetAggregate": {
+      "@type": "@id"
+    },
+    "od:hasRole": {
+      "@type": "@id"
+    },
+    "od:hasPermission": {
+      "@type": "@id"
+    },
+    "od:objectRef": {
+      "@type": "@id"
+    },
+    "od:boundBehavior": {
+      "@type": "@id"
+    }
   },
   "@graph": [
     {
@@ -39,7 +57,11 @@
           "od:label": "产品类型",
           "od:dataType": "DictionaryRef",
           "od:required": true,
-          "od:unique": false
+          "od:unique": false,
+          "od:dictionaryRef": {
+            "od:dictionaryId": "DICT-PRODUCT-TYPE",
+            "od:typeCode": "PRODUCT_TYPE"
+          }
         },
         {
           "@type": "od:Attribute",
@@ -80,7 +102,11 @@
           "od:label": "客户类型",
           "od:dataType": "DictionaryRef",
           "od:required": true,
-          "od:unique": false
+          "od:unique": false,
+          "od:dictionaryRef": {
+            "od:dictionaryId": "DICT-CUSTOMER-TYPE",
+            "od:typeCode": "CUSTOMER_TYPE"
+          }
         },
         {
           "@type": "od:Attribute",
@@ -233,7 +259,11 @@
           "od:label": "合同类型",
           "od:dataType": "DictionaryRef",
           "od:required": true,
-          "od:unique": false
+          "od:unique": false,
+          "od:dictionaryRef": {
+            "od:dictionaryId": "DICT-CONTRACT-TYPE",
+            "od:typeCode": "CONTRACT_TYPE"
+          }
         },
         {
           "@type": "od:Attribute",
@@ -587,7 +617,11 @@
           "od:label": "收款方式",
           "od:dataType": "DictionaryRef",
           "od:required": false,
-          "od:unique": false
+          "od:unique": false,
+          "od:dictionaryRef": {
+            "od:dictionaryId": "DICT-RECEIPT-METHOD",
+            "od:typeCode": "RECEIPT_METHOD"
+          }
         },
         {
           "@type": "od:Attribute",
@@ -635,7 +669,11 @@
           "od:label": "业务类型",
           "od:dataType": "DictionaryRef",
           "od:required": true,
-          "od:unique": false
+          "od:unique": false,
+          "od:dictionaryRef": {
+            "od:dictionaryId": "DICT-BIZ-TYPE",
+            "od:typeCode": "BIZ_TYPE"
+          }
         },
         {
           "@type": "od:Attribute",
@@ -651,7 +689,11 @@
           "od:label": "审批节点",
           "od:dataType": "DictionaryRef",
           "od:required": true,
-          "od:unique": false
+          "od:unique": false,
+          "od:dictionaryRef": {
+            "od:dictionaryId": "DICT-APPROVAL-NODE",
+            "od:typeCode": "APPROVAL_NODE"
+          }
         },
         {
           "@type": "od:Attribute",
@@ -675,7 +717,11 @@
           "od:label": "审批结果",
           "od:dataType": "DictionaryRef",
           "od:required": true,
-          "od:unique": false
+          "od:unique": false,
+          "od:dictionaryRef": {
+            "od:dictionaryId": "DICT-APPROVAL-RESULT",
+            "od:typeCode": "APPROVAL_RESULT"
+          }
         },
         {
           "@type": "od:Attribute",
@@ -801,24 +847,30 @@
           "@type": "od:DictionaryType",
           "od:typeCode": "CONTRACT_TYPE",
           "od:typeName": "合同类型",
-          "od:items": [
+          "od:hasItem": [
             {
-              "code": "PRODUCT",
-              "label": "产品合同",
-              "enabled": true,
-              "sortOrder": 10
+              "@id": "urn:od:contract-mgmt:M1:CONTRACT_TYPE:PRODUCT",
+              "@type": "od:DictionaryItem",
+              "od:code": "PRODUCT",
+              "od:label": "产品合同",
+              "od:enabled": true,
+              "od:sortOrder": 10
             },
             {
-              "code": "SERVICE",
-              "label": "服务合同",
-              "enabled": true,
-              "sortOrder": 20
+              "@id": "urn:od:contract-mgmt:M1:CONTRACT_TYPE:SERVICE",
+              "@type": "od:DictionaryItem",
+              "od:code": "SERVICE",
+              "od:label": "服务合同",
+              "od:enabled": true,
+              "od:sortOrder": 20
             },
             {
-              "code": "INTEGRATION",
-              "label": "集成合同",
-              "enabled": true,
-              "sortOrder": 30
+              "@id": "urn:od:contract-mgmt:M1:CONTRACT_TYPE:INTEGRATION",
+              "@type": "od:DictionaryItem",
+              "od:code": "INTEGRATION",
+              "od:label": "集成合同",
+              "od:enabled": true,
+              "od:sortOrder": 30
             }
           ]
         }
@@ -834,24 +886,30 @@
           "@type": "od:DictionaryType",
           "od:typeCode": "RECEIPT_METHOD",
           "od:typeName": "收款方式",
-          "od:items": [
+          "od:hasItem": [
             {
-              "code": "BANK",
-              "label": "银行转账",
-              "enabled": true,
-              "sortOrder": 10
+              "@id": "urn:od:contract-mgmt:M1:RECEIPT_METHOD:BANK",
+              "@type": "od:DictionaryItem",
+              "od:code": "BANK",
+              "od:label": "银行转账",
+              "od:enabled": true,
+              "od:sortOrder": 10
             },
             {
-              "code": "BILL",
-              "label": "票据",
-              "enabled": true,
-              "sortOrder": 20
+              "@id": "urn:od:contract-mgmt:M1:RECEIPT_METHOD:BILL",
+              "@type": "od:DictionaryItem",
+              "od:code": "BILL",
+              "od:label": "票据",
+              "od:enabled": true,
+              "od:sortOrder": 20
             },
             {
-              "code": "OTHER",
-              "label": "其他",
-              "enabled": true,
-              "sortOrder": 30
+              "@id": "urn:od:contract-mgmt:M1:RECEIPT_METHOD:OTHER",
+              "@type": "od:DictionaryItem",
+              "od:code": "OTHER",
+              "od:label": "其他",
+              "od:enabled": true,
+              "od:sortOrder": 30
             }
           ]
         }
@@ -867,18 +925,22 @@
           "@type": "od:DictionaryType",
           "od:typeCode": "APPROVAL_NODE",
           "od:typeName": "审批节点",
-          "od:items": [
+          "od:hasItem": [
             {
-              "code": "FINANCE_MANAGER",
-              "label": "财务经理审批",
-              "enabled": true,
-              "sortOrder": 10
+              "@id": "urn:od:contract-mgmt:M1:APPROVAL_NODE:FINANCE_MANAGER",
+              "@type": "od:DictionaryItem",
+              "od:code": "FINANCE_MANAGER",
+              "od:label": "财务经理审批",
+              "od:enabled": true,
+              "od:sortOrder": 10
             },
             {
-              "code": "GENERAL_MANAGER",
-              "label": "总经理审批",
-              "enabled": true,
-              "sortOrder": 20
+              "@id": "urn:od:contract-mgmt:M1:APPROVAL_NODE:GENERAL_MANAGER",
+              "@type": "od:DictionaryItem",
+              "od:code": "GENERAL_MANAGER",
+              "od:label": "总经理审批",
+              "od:enabled": true,
+              "od:sortOrder": 20
             }
           ]
         }
@@ -894,18 +956,22 @@
           "@type": "od:DictionaryType",
           "od:typeCode": "APPROVAL_RESULT",
           "od:typeName": "审批结果",
-          "od:items": [
+          "od:hasItem": [
             {
-              "code": "APPROVE",
-              "label": "通过",
-              "enabled": true,
-              "sortOrder": 10
+              "@id": "urn:od:contract-mgmt:M1:APPROVAL_RESULT:APPROVE",
+              "@type": "od:DictionaryItem",
+              "od:code": "APPROVE",
+              "od:label": "通过",
+              "od:enabled": true,
+              "od:sortOrder": 10
             },
             {
-              "code": "REJECT",
-              "label": "驳回",
-              "enabled": true,
-              "sortOrder": 20
+              "@id": "urn:od:contract-mgmt:M1:APPROVAL_RESULT:REJECT",
+              "@type": "od:DictionaryItem",
+              "od:code": "REJECT",
+              "od:label": "驳回",
+              "od:enabled": true,
+              "od:sortOrder": 20
             }
           ]
         }
@@ -921,18 +987,22 @@
           "@type": "od:DictionaryType",
           "od:typeCode": "BIZ_TYPE",
           "od:typeName": "业务类型",
-          "od:items": [
+          "od:hasItem": [
             {
-              "code": "CONTRACT_REG",
-              "label": "合同登记",
-              "enabled": true,
-              "sortOrder": 10
+              "@id": "urn:od:contract-mgmt:M1:BIZ_TYPE:CONTRACT_REG",
+              "@type": "od:DictionaryItem",
+              "od:code": "CONTRACT_REG",
+              "od:label": "合同登记",
+              "od:enabled": true,
+              "od:sortOrder": 10
             },
             {
-              "code": "INVOICE",
-              "label": "开票",
-              "enabled": true,
-              "sortOrder": 20
+              "@id": "urn:od:contract-mgmt:M1:BIZ_TYPE:INVOICE",
+              "@type": "od:DictionaryItem",
+              "od:code": "INVOICE",
+              "od:label": "开票",
+              "od:enabled": true,
+              "od:sortOrder": 20
             }
           ]
         }
@@ -948,7 +1018,7 @@
           "@type": "od:DictionaryType",
           "od:typeCode": "PRODUCT_TYPE",
           "od:typeName": "产品类型",
-          "od:items": []
+          "od:hasItem": []
         }
       ]
     },
@@ -962,7 +1032,7 @@
           "@type": "od:DictionaryType",
           "od:typeCode": "CUSTOMER_TYPE",
           "od:typeName": "客户类型",
-          "od:items": []
+          "od:hasItem": []
         }
       ]
     }

@@ -67,12 +67,19 @@ OD_CONTEXT = {
     "label": "rdfs:label",
     "type": "@type",
     "id": "@id",
+    # URN 引用谓词：值为字符串时被解释为 IRI（urn:od:...）
+    "od:sourceAggregate": {"@type": "@id"},
+    "od:targetAggregate": {"@type": "@id"},
+    "od:hasRole": {"@type": "@id"},
+    "od:hasPermission": {"@type": "@id"},
+    "od:objectRef": {"@type": "@id"},
+    "od:boundBehavior": {"@type": "@id"},
 }
 
 
 # ── M1: aggregates / dictionaries / associations ─────────────────────
 def convert_attribute(attr: dict) -> dict:
-    return {
+    node = {
         "@type": "od:Attribute",
         "od:name": attr["name"],
         "od:label": attr["label"],
@@ -80,6 +87,14 @@ def convert_attribute(attr: dict) -> dict:
         "od:required": bool(attr.get("required", False)),
         "od:unique": bool(attr.get("unique", False)),
     }
+    # 保留 dictionaryRef（让 SPARQL Q2 跨字典引用可查询）
+    if "dictionaryRef" in attr:
+        ref = attr["dictionaryRef"]
+        node["od:dictionaryRef"] = {
+            "od:dictionaryId": ref.get("dictionaryId", ""),
+            "od:typeCode": ref.get("typeCode", ""),
+        }
+    return node
 
 
 def convert_invariant(inv: dict) -> dict:
@@ -139,6 +154,19 @@ def convert_association(assoc: dict) -> dict:
     }
 
 
+def convert_dictionary_item(item: dict, type_code: str, idx: int) -> dict:
+    """YAML items[] → od:DictionaryItem 节点（带 @id）"""
+    code = item.get("code", f"item-{idx}")
+    return {
+        "@id": dict_iri(f"{type_code}:{code}"),
+        "@type": "od:DictionaryItem",
+        "od:code": code,
+        "od:label": item.get("label", ""),
+        "od:enabled": bool(item.get("enabled", True)),
+        "od:sortOrder": int(item.get("sortOrder", 0)),
+    }
+
+
 def convert_dictionary(d: dict) -> dict:
     return {
         "@id": dict_iri(d["id"]),
@@ -150,7 +178,10 @@ def convert_dictionary(d: dict) -> dict:
                 "@type": "od:DictionaryType",
                 "od:typeCode": t["typeCode"],
                 "od:typeName": t["typeName"],
-                "od:items": t.get("items", []),
+                "od:hasItem": [
+                    convert_dictionary_item(item, t["typeCode"], i)
+                    for i, item in enumerate(t.get("items", []))
+                ],
             }
             for t in d.get("types", [])
         ],

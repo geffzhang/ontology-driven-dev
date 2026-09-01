@@ -1,0 +1,85 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix od: <https://ontology.ontology-driven.dev/v9#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ─────────────────────────────────────────────────────────────
+# od:AggregateRootShape
+# M1 数据建模最小约束
+# ─────────────────────────────────────────────────────────────
+od:AggregateRootShape
+    a sh:NodeShape ;
+    sh:targetClass od:AggregateRoot ;
+    sh:property [
+        sh:path od:id ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "AggregateRoot 必有 id" ;
+    ] ;
+    sh:property [
+        sh:path od:name ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "AggregateRoot 必有 name" ;
+    ] ;
+    sh:property [
+        sh:path od:hasAttribute ;
+        sh:description "AggregateRoot 应有 attributes（允许空）" ;
+    ] .
+
+# ─────────────────────────────────────────────────────────────
+# od:AssociationShape
+# ─────────────────────────────────────────────────────────────
+od:AssociationShape
+    a sh:NodeShape ;
+    sh:targetClass od:Association ;
+    sh:property [
+        sh:path od:sourceAggregate ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:description "sourceAggregate 必是 IRI" ;
+    ] ;
+    sh:property [
+        sh:path od:targetAggregate ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:description "targetAggregate 必是 IRI" ;
+    ] .
+
+# ─────────────────────────────────────────────────────────────
+# od:DataDictionaryShape
+# ─────────────────────────────────────────────────────────────
+od:DataDictionaryShape
+    a sh:NodeShape ;
+    sh:targetClass od:DataDictionary ;
+    sh:property [
+        sh:path od:hasType ;
+        sh:minCount 1 ;
+        sh:description "DataDictionary 应至少有一个 type" ;
+    ] .
+
+od:DictionaryTypeShape
+    a sh:NodeShape ;
+    sh:targetClass od:DictionaryType ;
+    sh:property [
+        sh:path od:typeCode ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path od:hasItem ;
+        sh:description "type 应有 items" ;
+    ] .
+
+od:DictionaryItemShape
+    a sh:NodeShape ;
+    sh:targetClass od:DictionaryItem ;
+    sh:property [
+        sh:path od:code ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path od:label ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+    ] .

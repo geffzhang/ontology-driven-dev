@@ -7,7 +7,25 @@
     "xsd": "http://www.w3.org/2001/XMLSchema#",
     "label": "rdfs:label",
     "type": "@type",
-    "id": "@id"
+    "id": "@id",
+    "od:sourceAggregate": {
+      "@type": "@id"
+    },
+    "od:targetAggregate": {
+      "@type": "@id"
+    },
+    "od:hasRole": {
+      "@type": "@id"
+    },
+    "od:hasPermission": {
+      "@type": "@id"
+    },
+    "od:objectRef": {
+      "@type": "@id"
+    },
+    "od:boundBehavior": {
+      "@type": "@id"
+    }
   },
   "@graph": [
     {

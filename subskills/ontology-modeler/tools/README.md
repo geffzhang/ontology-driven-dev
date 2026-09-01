@@ -11,6 +11,11 @@
 | `validate_m6jsonld.py` | M6 JSON-LD 验证（单文件） | `m6-flow-model.jsonld` | exit 0/1 + 行输出 |
 | `validate_od_jsonld.py` | M1/M5/M7 JSON-LD 验证（多文件） | `m{1,5,7}-*-model.jsonld` | exit 0/1 + 行输出 |
 | `validate.py` | **统一入口**（本目录核心） | 目录 / 文件 | text 或 json + exit 0/1/2 |
+| `shacl/m6_flow_shape.ttl` | M6 FlowShape（12 步上限） | — | SHACL 形状 |
+| `shacl/m1_aggregate_shape.ttl` | M1 AggregateRoot/Association/数据字典形状 | — | SHACL 形状 |
+| `shacl/m5_actor_shape.ttl` | M5 Actor/Role/Permission 形状 | — | SHACL 形状 |
+| `shacl/run_shacl.py` | pyshacl 校验器 | data + shape | conforms bool + violations |
+| `sparql_queries.py` | **跨文件 SPARQL 查询演示** | reference-example/*.jsonld | 表格结果 |
 
 ## validate.py 用法
 
@@ -74,19 +79,61 @@ file.suffix
 ## 依赖
 
 ```bash
-pip install pyyaml rdflib
+pip install pyyaml rdflib pyshacl
 ```
 
 - `pyyaml` ≥ 6.0
 - `rdflib` ≥ 7.0（内置 JSON-LD Processor）
+- `pyshacl` ≥ 0.40（SHACL 校验）
+
+## SHACL 用法
+
+```bash
+# M6 stepCount ≤ 12 校验
+python tools/shacl/run_shacl.py reference-example/m6-flow-model.jsonld tools/shacl/m6_flow_shape.ttl
+
+# M1 / M5 结构约束
+python tools/shacl/run_shacl.py reference-example/m1-object-model.jsonld tools/shacl/m1_aggregate_shape.ttl
+python tools/shacl/run_shacl.py reference-example/m5-actor-model.jsonld tools/shacl/m5_actor_shape.ttl
+
+# JSON 格式输出（便于 CI 解析）
+python tools/shacl/run_shacl.py <data> <shape> --format json
+```
+
+## SPARQL 查询演示
+
+```bash
+# 列出 5 个可用查询
+python tools/sparql_queries.py --list
+
+# 跑单个
+python tools/sparql_queries.py --query Q1
+
+# 跑全部
+python tools/sparql_queries.py --all
+```
+
+### 5 个查询
+
+| ID | 跨文件 | 答案 |
+|---|---|---|
+| Q1 | M6 + M5 + M2 | M6 step 用到的 role + behavior（14 行） |
+| Q2 | M7 → M1 → 字典 | REP-CONTRACT-LIST 关联的所有字典项（3 行） |
+| Q3 | M5 + M2 | ACTOR-SALES 持有的 8 个 permission |
+| Q4 | M6 | step kind 分布统计（31 步） |
+| Q5 | M6 | 4 个 flow 的 GATEWAY routes（16 行） |
 
 ## 当前 PoC 状态
 
-| 验证器 | 黄金范例 | 状态 |
+| 验证器 / 工具 | 黄金范例 | 状态 |
 |---|---|---|
 | `validate_m6jsonld.py` | 4 flows | ✅ PASS |
 | `validate_od_jsonld.py` | M1=23 / M5=39 / M7=5 节点 | ✅ PASS |
 | `validate.py` 统一入口 | 4 jsonld + 7 yaml | ✅ PASS（exit 0） |
+| `shacl/run_shacl.py` M6 | stepCount ≤ 12 | ✅ conforms |
+| `shacl/run_shacl.py` M1 | 聚合/关联/字典约束 | ✅ conforms |
+| `shacl/run_shacl.py` M5 | 角色/权限约束 | ✅ conforms |
+| `sparql_queries.py` Q1-Q5 | 5 跨文件查询 | ✅ 全部返回结果 |
 
 ## 后续路线（来自 spec）
 
