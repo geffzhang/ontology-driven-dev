@@ -14,6 +14,7 @@
 | `shacl/m6_flow_shape.ttl` | M6 FlowShape（12 步上限） | — | SHACL 形状 |
 | `shacl/m1_aggregate_shape.ttl` | M1 AggregateRoot/Association/数据字典形状 | — | SHACL 形状 |
 | `shacl/m5_actor_shape.ttl` | M5 Actor/Role/Permission 形状 | — | SHACL 形状 |
+| `shacl/m7_report_shape.ttl` | M7 Report/SourceObject 形状 | — | SHACL 形状 |
 | `shacl/run_shacl.py` | pyshacl 校验器 | data + shape | conforms bool + violations |
 | `sparql_queries.py` | **跨文件 SPARQL 查询演示** | reference-example/*.jsonld | 表格结果 |
 
@@ -96,6 +97,9 @@ python tools/shacl/run_shacl.py reference-example/m6-flow-model.jsonld tools/sha
 python tools/shacl/run_shacl.py reference-example/m1-object-model.jsonld tools/shacl/m1_aggregate_shape.ttl
 python tools/shacl/run_shacl.py reference-example/m5-actor-model.jsonld tools/shacl/m5_actor_shape.ttl
 
+# M7 Report 约束（5 报表：LIST_QUERY / DETAIL_QUERY / STATISTICAL_QUERY / REPORT）
+python tools/shacl/run_shacl.py reference-example/m7-report-model.jsonld tools/shacl/m7_report_shape.ttl
+
 # M3 rule shape validation
 # - 负面 fixture：混合实例（AGG-CONTRACT-001 通过 / AGG-CONTRACT-002 违反 Rule 2；AGG-RECEIPT-001 通过 / AGG-RECEIPT-002 违反 Rule 7）→ 期望 exit 1，列出 2 条 SPARQL violation
 python tools/shacl/run_shacl.py reference-example/m3-fixture.jsonld reference-example/m3-rule-model.shacl.ttl
@@ -149,6 +153,7 @@ python tools/sparql_queries.py --all
 | `shacl/run_shacl.py` M6 | stepCount ≤ 12 | ✅ conforms |
 | `shacl/run_shacl.py` M1 | 聚合/关联/字典约束 | ✅ conforms |
 | `shacl/run_shacl.py` M5 | 角色/权限约束 | ✅ conforms |
+| `shacl/run_shacl.py` M7 | Report/SourceObject 约束（5 报表：4 query 类型 + primary 唯一） | ✅ conforms |
 | `shacl/run_shacl.py` M3 | M3 SHACL: 3/13 rules translated cleanly (single-entity Contract); 10/13 mixed-entity rules emit rdfs:comment + property shapes only (degraded by design) | ✅ mixed + positive fixtures conform/violate as expected |
 | `sparql_queries.py` Q1-Q5 | 5 跨文件查询 | ✅ 全部返回结果 |
 

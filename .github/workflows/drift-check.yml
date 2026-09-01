@@ -22,6 +22,7 @@ jobs:
           for f in m1 m5 m6 m7; do
             case $f in
               m6) shape=m6_flow_shape ;;
+              m7) shape=m7_report_shape ;;
               *) shape=${f}_*_shape ;;
             esac
             data=subskills/ontology-modeler/reference-example/$f-*model.jsonld

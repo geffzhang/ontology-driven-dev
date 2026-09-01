@@ -1,0 +1,90 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix od: <https://ontology.ontology-driven.dev/v9#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ─────────────────────────────────────────────────────────────
+# od:ReportShape
+# M7 报表建模最小约束
+# ─────────────────────────────────────────────────────────────
+od:ReportShape
+    a sh:NodeShape ;
+    sh:targetClass od:Report ;
+    sh:property [
+        sh:path od:id ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "Report 必有 id（REP-* 形式）" ;
+    ] ;
+    sh:property [
+        sh:path od:name ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "Report 必有中文名" ;
+    ] ;
+    sh:property [
+        sh:path od:alias ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "Report 必有 camelCase alias" ;
+    ] ;
+    sh:property [
+        sh:path od:description ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "Report 必有中文描述" ;
+    ] ;
+    sh:property [
+        sh:path od:objectType ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ("LIST_QUERY" "DETAIL_QUERY" "STATISTICAL_QUERY" "REPORT") ;
+        sh:description "Report.objectType 必须是 4 种 query 类型之一（LIST_QUERY / DETAIL_QUERY / STATISTICAL_QUERY / REPORT）" ;
+    ] ;
+    sh:property [
+        sh:path od:boundBehavior ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:description "Report.boundBehavior 必须引用 M2 Behavior URN" ;
+    ] ;
+    sh:property [
+        sh:path od:sourceObject ;
+        sh:minCount 1 ;
+        sh:description "Report 至少有一个 sourceObject" ;
+    ] ;
+    sh:sparql [
+        sh:select """
+            SELECT $this WHERE {
+                $this od:sourceObject ?so .
+                ?so od:primary true .
+            }
+            GROUP BY $this
+            HAVING (COUNT(?so) != 1)
+        """ ;
+        sh:description "Report 只能恰好有一个 primary sourceObject" ;
+    ] .
+
+# ─────────────────────────────────────────────────────────────
+# od:SourceObjectShape
+# Report 关联的源聚合根引用
+# ─────────────────────────────────────────────────────────────
+od:SourceObjectShape
+    a sh:NodeShape ;
+    sh:targetClass od:SourceObject ;
+    sh:property [
+        sh:path od:objectRef ;
+        sh:nodeKind sh:IRI ;
+        sh:minCount 1 ;
+        sh:description "SourceObject.objectRef 必须引用 AggregateRoot URN" ;
+    ] ;
+    sh:property [
+        sh:path od:alias ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "SourceObject.alias 必填" ;
+    ] ;
+    sh:property [
+        sh:path od:primary ;
+        sh:datatype xsd:boolean ;
+        sh:maxCount 1 ;
+        sh:description "SourceObject.primary 是 boolean（true/false）" ;
+    ] .
