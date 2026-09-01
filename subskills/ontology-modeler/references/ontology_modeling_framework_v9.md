@@ -2032,3 +2032,41 @@ yaml/
 ---
 
 *© 2026  Ontology-Driven Software Modeling Framework  v9.1（单体同步版 · 七模型）*
+
+## 十一、JSON-LD 序列化约定
+
+本框架支持 YAML → JSON-LD 双轨输出，详见 [spec § 三 双轨制策略](../specs/2026-09-01-yaml-to-jsonld-design.md)。
+
+### 11.1 双轨制对照
+
+| 模型 | YAML | JSON-LD | 词表 |
+|---|---|---|---|
+| M1 对象 | ✅ source | ✅ full | `od:` |
+| M2 行为 | ✅ 全量 | ⚠️ metadata-only | `od:` |
+| M3 规则 | ✅ 全量 | ✅ shacl.ttl | `sh:` |
+| M5 主体 | ✅ source | ✅ full | `od:` |
+| M6 流程 | ✅ source | ✅ full（meta: 复用） | `meta:` |
+| M7 查询 | ✅ source | ✅ metadata-only | `od:` |
+| MU UI | ✅ source | ❌ 不迁 | — |
+
+### 11.2 词表 IRI（未注册 w3id）
+
+- `od:` → `https://ontology.ontology-driven.dev/v9#`
+- `meta:` → `https://openclaw.dev/meta/v1#`
+- `sh:` → `http://www.w3.org/ns/shacl#`
+
+### 11.3 跨模型引用
+
+所有跨节点引用使用 `urn:od:<domain>:<model>:<id>` URN 形式，例如：
+- M1 AggregateRoot: `urn:od:contract-mgmt:M1:AGG-CONTRACT-001`
+- M5 Role: `urn:od:contract-mgmt:M5:ROLE-SALES`
+- M6 Flow: `urn:od:contract-mgmt:M6:FLOW-CONTRACT-001`
+- M6 Step: `urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A02`
+
+### 11.4 验证与转换工具
+
+参见 [tools/README.md](../../tools/README.md)。
+
+### 11.5 引用 spec
+
+- YAML → JSON-LD 迁移 spec：[2026-09-01-yaml-to-jsonld-design.md](../../specs/2026-09-01-yaml-to-jsonld-design.md)
