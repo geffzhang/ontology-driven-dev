@@ -27,7 +27,7 @@ jobs:
             data=subskills/ontology-modeler/reference-example/$f-*model.jsonld
             # shellcheck disable=SC2086
             [ -f $data ] || continue
-            shape_path=$(ls subskills/ontology-modeler/tools/shacl/${shape}.ttl 2>/dev/null | head -1)
+            shape_path=$(ls subskills/ontology-modeler/tools/shacl/${shape}.ttl 2>/dev/null | head -1 || true)
             if [ -z "$shape_path" ]; then
               echo "[skip] $f: SHACL shape ${shape}.ttl not yet authored (forward-compat placeholder)"
               continue
