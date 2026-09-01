@@ -2,14 +2,13 @@
 name: ontology-driven-dev
 description: "Use this meta-skill when the user wants to turn a business requirement into a requirement specification and a seven-model ontology YAML set through the two-stage pipeline 'requirement exploration -> ontology modeling'. It runs a 12-step DAG with three hard human-confirmation gates in stage 1 and three model-generation layers plus one cross-reference validation pass in stage 2. Do not use it for ad-hoc Q&A, generic chat, single-stage tasks outside the two-stage pipeline, or non-ontology deliverables."
 kind: meta
-meta_priority: 50
+meta_priority: 70
 always: false
 final_text_mode: "step:validate_cross_refs"
 triggers: ["本体驱动", "需求探索", "本体建模", "七模型", "业务需求规格", "MetaSkill 驱动"]
 provenance: {"origin": "ontology-driven-dev", "license": "MIT"}
 composition:
   steps:
-    # ========== 步骤 1：入口检测与业务域抽取 ==========
     - id: detect_entry
       kind: llm_chat
       output_contract:
@@ -42,10 +41,6 @@ composition:
           to: p2_objects_roles
         - when: "outputs.detect_entry.entry | starts_with('reconfirm_stage_')"
           to: p1_foundation_explore
-
-    # ========== 阶段一：需求探索（7 阶段 → 3 簇）==========
-
-    # ---------- 簇 1：foundation（阶段 0-2）----------
     - id: p1_foundation_explore
       kind: agent
       skill: req-explorer
@@ -69,16 +64,13 @@ composition:
         backoff_ms: 500
       clarify:
         mode: form
-        nl_extract: false
+        extract_natural_language: false
         fields:
-          # 簇级批量决策
           - name: bulk_decision
             type: enum
             options: [accept_all_ai, review_each_stage]
             default: review_each_stage
             required: true
-
-          # 阶段零
           - name: stage0_ai_suggestion
             type: string
             required: true
@@ -96,8 +88,6 @@ composition:
             type: string
             required: false
             max_length: 1000
-
-          # 阶段一
           - name: stage1_ai_suggestion
             type: string
             required: true
@@ -115,8 +105,6 @@ composition:
             type: string
             required: false
             max_length: 1000
-
-          # 阶段二
           - name: stage2_ai_suggestion
             type: string
             required: true
@@ -134,16 +122,13 @@ composition:
             type: string
             required: false
             max_length: 1000
-
-          # 簇级回退
           - name: cluster_modification
             type: string
             required: false
             max_length: 1000
         cancel_words: ["算了", "取消", "cancel", "stop", "abort"]
         timeout_seconds: 1800
-
-    # ---------- 簇 2：flow（阶段 3-4）----------
+        
     - id: p1_flow_explore
       kind: agent
       skill: req-explorer
@@ -161,7 +146,7 @@ composition:
       depends_on: [p1_flow_explore]
       clarify:
         mode: form
-        nl_extract: false
+        extract_natural_language: false
         fields:
           - name: bulk_decision
             type: enum
@@ -208,8 +193,6 @@ composition:
             max_length: 1000
         cancel_words: ["算了", "取消", "cancel", "stop", "abort"]
         timeout_seconds: 1800
-
-    # ---------- 簇 3：tail（阶段 5-6）----------
     - id: p1_tail_explore
       kind: agent
       skill: req-explorer
@@ -227,7 +210,7 @@ composition:
       depends_on: [p1_tail_explore]
       clarify:
         mode: form
-        nl_extract: false
+        extract_natural_language: false
         fields:
           - name: bulk_decision
             type: enum
@@ -275,7 +258,6 @@ composition:
         cancel_words: ["算了", "取消", "cancel", "stop", "abort"]
         timeout_seconds: 1800
 
-    # ========== 步骤 8：写入需求规格说明书 ==========
     - id: write_requirement_doc
       kind: tool_call
       tool: write_file
@@ -283,11 +265,11 @@ composition:
       depends_on: [p1_tail_confirm]
       skip_if: "outputs.detect_entry.entry == 'only_modeling'"
       retry:
-        max_attempts: 2
-        backoff_ms: 1000
+         max_attempts: 2
+         backoff_ms: 1000
       tool_args:
-        path: "{{ inputs.workspace_dir }}/{{ outputs.detect_entry.domain }}-需求规格说明书-V9.md"
-        content: |
+         path: "{{ inputs.workspace_dir }}/{{ outputs.detect_entry.domain }}-需求规格说明书-V9.md"
+         content: |
           # {{ outputs.detect_entry.domain }} 需求规格说明书（V9.0）
 
           > 生成方式：ontology-driven-dev MetaSkill（OpenClaw）
@@ -343,8 +325,7 @@ composition:
           - 决定：{{ outputs.p1_tail_confirm.stage6_decision }}
           - 修改：{{ outputs.p1_tail_confirm.stage6_modification | default("无") }}
 
-          ---
-
+ 
           ## 附录 B 确认状态
 
           | 阶段 | 类别 | 决定 | 修改 |
@@ -357,13 +338,10 @@ composition:
           | 阶段五 | - | {{ outputs.p1_tail_confirm.stage5_decision }} | {{ outputs.p1_tail_confirm.stage5_modification | default("-") }} |
           | 阶段六 | - | {{ outputs.p1_tail_confirm.stage6_decision }} | {{ outputs.p1_tail_confirm.stage6_modification | default("-") }} |
 
-    # ========== 阶段二：本体建模（步骤 9-12）==========
-
     - id: p2_objects_roles
       kind: agent
       skill: ontology-modeler
       depends_on: [write_requirement_doc]
-      # write_requirement_doc 在 only_modeling 模式下通过 skip_if 透传，本步骤仍可执行
       with:
         models: ["M1", "M5"]
         domain: "{{ outputs.detect_entry.domain }}"
@@ -434,12 +412,9 @@ composition:
         required_properties: [model_files, generation_log, manifest_path]
 
     - id: validate_cross_refs
-      # 9 条检查的语义定义见 subskills/model-validator/SKILL.md 第一节；
-      # 脚本实现 scripts/validate_yaml_refs.py（6 条跨引用检查 + 3 条 JSON-LD 门禁，
-      # 经子进程委托 ontology-modeler 验证器）。
       kind: skill_exec
       skill: model-validator
-      skill_exec_entrypoint: scripts/validate_yaml_refs.py
+      entrypoint: scripts/validate_yaml_refs.py
       skill_exec_parse_mode: json
       skill_exec_args:
         - "{{ inputs.workspace_dir }}/yaml"
