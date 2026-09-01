@@ -42,7 +42,7 @@ ontology-driven-dev/
 
 `tool_call` 步骤依赖的工具为 **OpenClaw 内置 ITool**：
 
-- 步骤 8 → [`FileWriteTool`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/FileWriteTool.cs)（`write_file`）
+- 步骤 8 → `write_file`
 
 步骤 12 → `skill_exec` 调用本仓库 [`subskills/model-validator/`](subskills/model-validator/) 的 Python 门禁（`scripts/validate_yaml_refs.py`，9 条检查），无需注册 ITool。
 
