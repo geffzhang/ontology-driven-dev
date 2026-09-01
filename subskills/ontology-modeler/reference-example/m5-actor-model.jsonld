@@ -1,0 +1,382 @@
+{
+  "@context": {
+    "@vocab": "https://ontology.ontology-driven.dev/v9#",
+    "od": "https://ontology.ontology-driven.dev/v9#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "label": "rdfs:label",
+    "type": "@type",
+    "id": "@id"
+  },
+  "@graph": [
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-SAVE-DRAFT",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-SAVE-DRAFT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_SaveAsDraft",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-SUBMIT",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-SUBMIT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_Submit",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-RESUBMIT",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-RESUBMIT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_Resubmit",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-INVOICE-SAVE-DRAFT",
+      "@type": "od:Permission",
+      "od:id": "PERM-INVOICE-SAVE-DRAFT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Invoice_SaveAsDraft",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-INVOICE-SUBMIT",
+      "@type": "od:Permission",
+      "od:id": "PERM-INVOICE-SUBMIT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Invoice_Submit",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-INVOICE-RESUBMIT",
+      "@type": "od:Permission",
+      "od:id": "PERM-INVOICE-RESUBMIT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Invoice_Resubmit",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-RECEIPT-RECORD",
+      "@type": "od:Permission",
+      "od:id": "PERM-RECEIPT-RECORD",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Receipt_Record",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-RECEIPT-REVERSE",
+      "@type": "od:Permission",
+      "od:id": "PERM-RECEIPT-REVERSE",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Receipt_Reverse",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-VOID",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-VOID",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_VoidOrArchive",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-INVOICE-VOID",
+      "@type": "od:Permission",
+      "od:id": "PERM-INVOICE-VOID",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Invoice_Void",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-PRODUCT-MAINTAIN",
+      "@type": "od:Permission",
+      "od:id": "PERM-PRODUCT-MAINTAIN",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Product_Maintain",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CUSTOMER-MAINTAIN",
+      "@type": "od:Permission",
+      "od:id": "PERM-CUSTOMER-MAINTAIN",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Customer_Maintain",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-DEPARTMENT-MAINTAIN",
+      "@type": "od:Permission",
+      "od:id": "PERM-DEPARTMENT-MAINTAIN",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Department_Maintain",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-EMPLOYEE-MAINTAIN",
+      "@type": "od:Permission",
+      "od:id": "PERM-EMPLOYEE-MAINTAIN",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Employee_Maintain",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-LIST",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryList",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-DETAIL",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryDetail",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-EXECUTION",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryExecutionAnalysis",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-DEPT-SUMMARY",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryDepartmentSummary",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-UNRECEIVED",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryInvoicedUnreceived",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST-OWN-DEPT",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-LIST-OWN-DEPT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryList",
+      "od:dataScope": "DEPT"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryDetail",
+      "od:dataScope": "DEPT"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryExecutionAnalysis",
+      "od:dataScope": "DEPT"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryDepartmentSummary",
+      "od:dataScope": "DEPT"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_QueryInvoicedUnreceived",
+      "od:dataScope": "DEPT"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-FINANCE",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-APPROVE-FINANCE",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_ApproveFinance",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-LARGE",
+      "@type": "od:Permission",
+      "od:id": "PERM-CONTRACT-APPROVE-LARGE",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Contract_ApproveGeneralManager",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:PERM-INVOICE-APPROVE",
+      "@type": "od:Permission",
+      "od:id": "PERM-INVOICE-APPROVE",
+      "od:targetType": "BEHAVIOR",
+      "od:targetRef": "Invoice_ApproveFinance",
+      "od:dataScope": "ALL"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ROLE-SALES",
+      "@type": "od:Role",
+      "od:id": "ROLE-SALES",
+      "od:name": "销售人员",
+      "od:hasPermission": [
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-SAVE-DRAFT",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-SUBMIT",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-RESUBMIT",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ROLE-FINANCE",
+      "@type": "od:Role",
+      "od:id": "ROLE-FINANCE",
+      "od:name": "财务人员",
+      "od:hasPermission": [
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-SAVE-DRAFT",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-SUBMIT",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-RESUBMIT",
+        "urn:od:contract-mgmt:M5:PERM-INVOICE-SAVE-DRAFT",
+        "urn:od:contract-mgmt:M5:PERM-INVOICE-SUBMIT",
+        "urn:od:contract-mgmt:M5:PERM-INVOICE-RESUBMIT",
+        "urn:od:contract-mgmt:M5:PERM-RECEIPT-RECORD",
+        "urn:od:contract-mgmt:M5:PERM-RECEIPT-REVERSE",
+        "urn:od:contract-mgmt:M5:PERM-INVOICE-VOID",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER",
+      "@type": "od:Role",
+      "od:id": "ROLE-FINANCE-MANAGER",
+      "od:name": "财务经理",
+      "od:hasPermission": [
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-VOID",
+        "urn:od:contract-mgmt:M5:PERM-PRODUCT-MAINTAIN",
+        "urn:od:contract-mgmt:M5:PERM-CUSTOMER-MAINTAIN",
+        "urn:od:contract-mgmt:M5:PERM-DEPARTMENT-MAINTAIN",
+        "urn:od:contract-mgmt:M5:PERM-EMPLOYEE-MAINTAIN",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-FINANCE",
+        "urn:od:contract-mgmt:M5:PERM-INVOICE-APPROVE",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER",
+      "@type": "od:Role",
+      "od:id": "ROLE-GENERAL-MANAGER",
+      "od:name": "总经理",
+      "od:hasPermission": [
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-LARGE",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ROLE-EMPLOYEE",
+      "@type": "od:Role",
+      "od:id": "ROLE-EMPLOYEE",
+      "od:name": "普通员工",
+      "od:hasPermission": [
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST-OWN-DEPT",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT",
+        "urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ROLE-SYSTEM",
+      "@type": "od:Role",
+      "od:id": "ROLE-SYSTEM",
+      "od:name": "系统自动执行主体",
+      "od:hasPermission": []
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ACTOR-SALES",
+      "@type": "od:Actor",
+      "od:id": "ACTOR-SALES",
+      "od:name": "销售人员",
+      "od:actorType": "HUMAN",
+      "od:hasRole": [
+        "urn:od:contract-mgmt:M5:ROLE-SALES"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ACTOR-FINANCE",
+      "@type": "od:Actor",
+      "od:id": "ACTOR-FINANCE",
+      "od:name": "财务人员",
+      "od:actorType": "HUMAN",
+      "od:hasRole": [
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ACTOR-FINANCE-MANAGER",
+      "@type": "od:Actor",
+      "od:id": "ACTOR-FINANCE-MANAGER",
+      "od:name": "财务经理",
+      "od:actorType": "HUMAN",
+      "od:hasRole": [
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ACTOR-GENERAL-MANAGER",
+      "@type": "od:Actor",
+      "od:id": "ACTOR-GENERAL-MANAGER",
+      "od:name": "总经理",
+      "od:actorType": "HUMAN",
+      "od:hasRole": [
+        "urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ACTOR-EMPLOYEE",
+      "@type": "od:Actor",
+      "od:id": "ACTOR-EMPLOYEE",
+      "od:name": "普通员工",
+      "od:actorType": "HUMAN",
+      "od:hasRole": [
+        "urn:od:contract-mgmt:M5:ROLE-EMPLOYEE"
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M5:ACTOR-SYSTEM",
+      "@type": "od:Actor",
+      "od:id": "ACTOR-SYSTEM",
+      "od:name": "系统自动执行主体",
+      "od:actorType": "SYSTEM",
+      "od:hasRole": [
+        "urn:od:contract-mgmt:M5:ROLE-SYSTEM"
+      ]
+    }
+  ]
+}
