@@ -31,20 +31,26 @@ ontology-driven-dev/
     │   │   └── AI需求探索与确认提示词V9.0.md      # 含《软件需求编写规范 V9.0》全文
     │   └── reference-example/
     │       └── 合同管理需求规格说明书-V9.md         # 黄金范例（销售合同执行管理）
-    └── ontology-modeler/                   # 阶段二：本体建模执行器
+    ├── ontology-modeler/                   # 阶段二：本体建模执行器
+    │   ├── SKILL.md
+    │   ├── references/
+    │   │   └── ontology_modeling_framework_v9.md  # 七模型元规范 + YAML 模板
+    │   ├── scripts/                        # 确定性工具链（yaml2* / validate / drift_check / merge_rdf …）
+    │   └── reference-example/
+    │       ├── m1-object-model.yaml … m7-report-model.yaml + mu-ui-model.yaml
+    │       ├── manifest.json               # 模型清单
+    │       └── 派生产物：5 份 JSON-LD + m3 SHACL + manifest.jsonld + ontology-merged.ttl
+    └── model-validator/                    # 阶段二门禁：跨引用 + JSON-LD 编排（步骤 12 单入口）
         ├── SKILL.md
-        ├── references/
-        │   └── ontology_modeling_framework_v9.md  # 七模型元规范 + YAML 模板
-        └── reference-example/
-            ├── m1-object-model.yaml … m7-report-model.yaml + mu-ui-model.yaml
-            └── manifest.json
+        └── scripts/
+            └── validate_yaml_refs.py       # 9 条门禁单入口（6 YAML 跨引用自研 + 3 JSON-LD 委托 ontology-modeler）
 ```
 
 `tool_call` 步骤依赖的工具为 **OpenClaw 内置 ITool**：
 
 - 步骤 8 → `write_file`
 
-步骤 12 → `skill_exec` 调用本仓库 [`subskills/model-validator/`](subskills/model-validator/) 的 Python 门禁（`scripts/validate_yaml_refs.py`，9 条检查），无需注册 ITool。
+步骤 12 → `skill_exec` 调用本仓库 [`subskills/model-validator/`](subskills/model-validator/) 的 Python 门禁（`scripts/validate_yaml_refs.py`，9 条检查单入口），无需注册 ITool；JSON-LD 子门禁（`jsonld_parse` / `shacl` / `id_consistency`）通过子进程委托 `ontology-modeler/scripts/` 下的同义验证器。
 
 每个 sub-skill 自带规范与范例，独立可移植。
 
@@ -86,16 +92,43 @@ Skills:
 - **门禁**：每簇结束触发 `user_input` 强门禁表单（13/9/9 字段），必须**硬暂停等人确认**；企业专属（B 类）内容 `decision` 不可 `skip`。
 - **产出**：`<业务域>-需求规格说明书-V9.md`（含附录 C 七模型建模输入基线），由步骤 8 统一写入。
 
-### 阶段二：本体建模 → 七模型 YAML
+### 阶段二：本体建模 → 七模型 YAML + 派生 RDF 制品
+
+**产物清单**（全部落到运行工作区根 `yaml/` 目录）：
+
+```text
+yaml/
+├── m1-object-model.yaml          # M1 对象模型
+├── m2-behavior-model.yaml         # M2 行为模型
+├── m3-rule-model.yaml             # M3 规则模型
+├── m5-actor-model.yaml            # M5 主体模型（角色 + 权限）
+├── m6-flow-model.yaml             # M6 流程模型
+├── m7-report-model.yaml           # M7 查询报表模型
+├── mu-ui-model.yaml               # MU UI 模型（v9.1 AI 原生）
+├── manifest.json                  # 模型清单（步骤 11 落地）
+│
+│   ── 以下为派生层（yaml2* 转换器产出） ──
+├── m1-object-model.jsonld
+├── m2-behavior-model.jsonld
+├── m3-rule-model.shacl.ttl        # M3 SHACL 形状（TTL）
+├── m5-actor-model.jsonld
+├── m6-flow-model.jsonld
+├── m7-report-model.jsonld
+├── manifest.jsonld                # 清单的 JSON-LD 派生
+│
+│   ── 以下仅在步骤 11 批次（六份派生齐备）由 merge_rdf.py 必做打包 ──
+└── ontology-merged.ttl            # od: + meta: + sh: 单图 RDF（自包含 SHACL bundle）
+```
 
 - **依据**：[`subskills/ontology-modeler/references/ontology_modeling_framework_v9.md`](subskills/ontology-modeler/references/ontology_modeling_framework_v9.md)。
 - **输入**：阶段一需求文档的附录 C 基线（确定性输入，不再做大范围业务拆分）。
-- **产物**：M1 对象 / M2 行为 / M3 规则 / M5 主体 / M6 流程 / M7 查询报表 / MU UI（v9.1 AI 原生：应用 → 能力目录 → 工具契约 → 界面单元 → 操作功能点）共七个 YAML + `manifest.json`，输出到项目根 `yaml/` 目录。
+- **产物**：M1 对象 / M2 行为 / M3 规则 / M5 主体 / M6 流程 / M7 查询报表 / MU UI（v9.1 AI 原生：应用 → 能力目录 → 工具契约 → 界面单元 → 操作功能点）共七个 YAML + `manifest.json`，输出到项目根 `yaml/` 目录。**派生层**：yaml2* 转换器产出 5 份 JSON-LD（M1/M2/M5/M6/M7）+ M3 SHACL TTL + `manifest.jsonld`；六份派生齐备的批次须额外由 `merge_rdf.py` 打包生成 `ontology-merged.ttl`（新产物，不替代任何逐模型文件）。
 - **生成顺序**（步骤 9-11）：
   - 步骤 9：M1 + M5(角色)
   - 步骤 10：M2 + M3 + M7
   - 步骤 11：M5'(权限，追加到 M5 文件) + M6 + MU + manifest.json
-- **一致性门禁**（步骤 12）：可追溯性、M7↔M2 一对一、M6 引用无环等 6 条强制核对 + 3 条 JSON-LD 门禁，由本仓库 [`subskills/model-validator/`](subskills/model-validator/) 的 Python 门禁（`skill_exec`）实现。
+  - 步骤 11 批次后（六份派生齐备）：**必做** `scripts/merge_rdf.py <yaml目录>` 打包 `ontology-merged.ttl`；仅六份齐备的批次执行，未齐备（步骤 9/10 批次）跳过。
+- **一致性门禁**（步骤 12）：9 条门禁单入口 [`subskills/model-validator/scripts/validate_yaml_refs.py`](subskills/model-validator/scripts/validate_yaml_refs.py)（`skill_exec` 调用）。**6 条 YAML 跨引用**（自研）：`traceability` / `query_mapping` / `flow_refs` / `acyclic_call_graph` / `query_behavior_bidir` / `rule_condition_separation`；**3 条 JSON-LD 门禁**（委托 `ontology-modeler/scripts/` 下的同义验证器）：`jsonld_parse` / `shacl` / `id_consistency`。派生 JSON-LD 缺失时后 3 条按 `SKIP` 处理（前向兼容，不视为失败）。
 
 ---
 
@@ -136,6 +169,20 @@ with:
 ```
 
 详见 [`subskills/req-explorer/SKILL.md`](subskills/req-explorer/SKILL.md) 与 [`subskills/ontology-modeler/SKILL.md`](subskills/ontology-modeler/SKILL.md)。
+
+> `model-validator` 不通过 `skill:` 直调，而是经 MetaSkill 步骤 12 `skill_exec` 调用其 Python 脚本；CI 或本地调试可直接执行该脚本：
+
+```bash
+# 完整 9 条门禁
+python subskills/model-validator/scripts/validate_yaml_refs.py \
+    <yaml_dir> <manifest> --format json
+
+# 仅跑指定检查（可重复 --check）
+python subskills/model-validator/scripts/validate_yaml_refs.py \
+    <yaml_dir> <manifest> --check traceability --check query_mapping
+```
+
+退出码：`0` = OK / `1` = FAIL / `2` = ERROR（参数或加载错误）。详见 [`subskills/model-validator/SKILL.md`](subskills/model-validator/SKILL.md)。
 
 ---
 
