@@ -1,0 +1,31 @@
+name: drift-check
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # 每周一 09:00 UTC（spec § 八 第 3 条）
+  workflow_dispatch:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.14' }
+      - run: pip install pyyaml rdflib pyshacl
+      - run: |
+          python subskills/ontology-modeler/tools/validate.py \
+              subskills/ontology-modeler/reference-example/
+          python subskills/ontology-modeler/tools/drift_check.py \
+              subskills/ontology-modeler/reference-example/
+          python subskills/ontology-modeler/tools/sparql_queries.py --all > /dev/null
+      - run: |
+          for f in m1 m5 m6 m7; do
+            case $f in
+              m6) shape=m6_flow_shape ;;
+              *) shape=${f}_*_shape ;;
+            esac
+            [ -f subskills/ontology-modeler/reference-example/$f-*model.jsonld ] && \
+              python subskills/ontology-modeler/tools/shacl/run_shacl.py \
+                  subskills/ontology-modeler/reference-example/$f-*model.jsonld \
+                  subskills/ontology-modeler/tools/shacl/${shape}.ttl
+          done
