@@ -1,0 +1,186 @@
+@prefix od: <https://ontology.ontology-driven.dev/v9#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+od:RULE-CONTRACT-APPROVAL-LEVELShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(totalAmount >= 1000000
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断合同含税总金额是否大于等于 100 万元，决定是否需要总经理审批" .
+
+od:RULE-CONTRACT-INVOICE-ELIGIBLEShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(contractStatus == '已纳入管理' OR contractStatus == '已结清'
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断合同是否已纳入管理且未作废、未归档，从而允许开票" .
+
+od:RULE-PAYSTAGE-REMAIN-QUOTAShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(historicalAllocation + currentAllocation <= stageAmount
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断本次分摊加历史有效分摊是否不超过阶段应付金额" .
+
+od:RULE-INVOICE-REMAIN-RECEIPT-QUOTAShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(historicalReceipt + currentReceipt <= invoiceAmount
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断本次收款加历史有效收款是否不超过开票金额" .
+
+od:RULE-INVOICE-RECEIPT-STATUSShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(IF receivedAmount <= 0 THEN '未收款'
+ELSE IF receivedAmount >= invoiceAmount THEN '已收款'
+ELSE '部分收款'
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "根据有效收款累计相对开票金额判定开票处于未收款、部分收款或全部收齐" .
+
+od:RULE-CONTRACT-VOID-ELIGIBLEShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(approvedInvoiceCount == 0 AND validReceiptCount == 0
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断是否不存在已批准开票或有效收款，从而允许作废合同" .
+
+od:RULE-INVOICE-VOID-ELIGIBLEShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(validReceiptCount == 0
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断开票是否存在有效收款，从而允许作废" .
+
+od:RULE-INVOICE-TAXRATE-CONSISTENTShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(invoiceTaxRate == contractTaxRate
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断开票税率是否等于合同税率" .
+
+od:RULE-APPROVAL-SODShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(approverId != submitterId
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断当前审批人是否不是该业务记录的提交人" .
+
+od:RULE-CONTRACT-SETTLEMENTShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(allStagesFullyInvoiced == true AND allInvoicesFullyReceived == true
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断所有付款阶段是否均已足额开票，且所有已批准未作废开票均已全部收齐" .
+
+od:RULE-ALLOCATION-CONTRACT-CONSISTENTShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(allocationContractId == invoiceContractId
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断分摊记录、开票和付款阶段是否属于同一合同" .
+
+od:RULE-RECEIPT-CONTRACT-CONSISTENTShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(receiptContractId == invoiceContractId
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断收款所选合同是否等于对应开票所属合同" .
+
+od:RULE-OWNER-DEPT-CONSISTENTShape
+    a sh:NodeShape ;
+    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:sparql [
+        sh:select """
+            SELECT ?this WHERE {
+                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
+                FILTER ( !(ownerDepartmentId == contractDepartmentId
+) )
+        """ ;
+    ] ;
+    sh:severity sh:Violation ;
+    sh:message "判断责任人所属部门是否等于合同所属部门" .
