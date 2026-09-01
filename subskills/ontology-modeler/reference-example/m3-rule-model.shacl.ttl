@@ -1,186 +1,277 @@
 @prefix od: <https://ontology.ontology-driven.dev/v9#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 od:RULE-CONTRACT-APPROVAL-LEVELShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:targetClass od:Contract ;
+
     sh:sparql [
         sh:select """
             SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(totalAmount >= 1000000
-) )
+            ?this od:totalAmount ?totalAmount .
+            FILTER (?totalAmount >= 1000000)
+            }
         """ ;
     ] ;
+
+    sh:property [
+        sh:path od:totalAmount ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "合同审批层级判定: requires valid totalAmount (Decimal)" ;
+    ] ;
+    rdfs:comment """Rule: 合同审批层级判定. DSL: totalAmount >= 1000000 (pattern: Pattern1-Simple)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断合同含税总金额是否大于等于 100 万元，决定是否需要总经理审批" .
 
 od:RULE-CONTRACT-INVOICE-ELIGIBLEShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:targetClass od:Contract ;
+
     sh:sparql [
         sh:select """
             SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(contractStatus == '已纳入管理' OR contractStatus == '已结清'
-) )
+            ?this od:contractStatus ?contractStatus .
+            FILTER (!(?contractStatus = "已纳入管理" || ?contractStatus = "已结清"))
+            }
         """ ;
     ] ;
+
+    sh:property [
+        sh:path od:contractStatus ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "合同可开票资格: requires valid contractStatus (Enum)" ;
+    ] ;
+    rdfs:comment """Rule: 合同可开票资格. DSL: contractStatus == '已纳入管理' OR contractStatus == '已结清' (pattern: Pattern3-OR-chain)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断合同是否已纳入管理且未作废、未归档，从而允许开票" .
 
 od:RULE-PAYSTAGE-REMAIN-QUOTAShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(historicalAllocation + currentAllocation <= stageAmount
-) )
-        """ ;
+    sh:property [
+        sh:path od:stageAmount ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "付款阶段剩余可开票额度: requires valid stageAmount (Decimal)" ;
     ] ;
+    sh:property [
+        sh:path od:historicalAllocation ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "付款阶段剩余可开票额度: requires valid historicalAllocation (Decimal)" ;
+    ] ;
+    sh:property [
+        sh:path od:currentAllocation ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "付款阶段剩余可开票额度: requires valid currentAllocation (Decimal)" ;
+    ] ;
+    rdfs:comment """Rule: 付款阶段剩余可开票额度. DSL: historicalAllocation + currentAllocation <= stageAmount (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断本次分摊加历史有效分摊是否不超过阶段应付金额" .
 
 od:RULE-INVOICE-REMAIN-RECEIPT-QUOTAShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(historicalReceipt + currentReceipt <= invoiceAmount
-) )
-        """ ;
+    sh:property [
+        sh:path od:invoiceAmount ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "开票剩余可收款额度: requires valid invoiceAmount (Decimal)" ;
     ] ;
+    sh:property [
+        sh:path od:historicalReceipt ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "开票剩余可收款额度: requires valid historicalReceipt (Decimal)" ;
+    ] ;
+    sh:property [
+        sh:path od:currentReceipt ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "开票剩余可收款额度: requires valid currentReceipt (Decimal)" ;
+    ] ;
+    rdfs:comment """Rule: 开票剩余可收款额度. DSL: historicalReceipt + currentReceipt <= invoiceAmount (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断本次收款加历史有效收款是否不超过开票金额" .
 
 od:RULE-INVOICE-RECEIPT-STATUSShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(IF receivedAmount <= 0 THEN '未收款'
-ELSE IF receivedAmount >= invoiceAmount THEN '已收款'
-ELSE '部分收款'
-) )
-        """ ;
+    sh:property [
+        sh:path od:invoiceAmount ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "开票收款状态判定: requires valid invoiceAmount (Decimal)" ;
     ] ;
+    sh:property [
+        sh:path od:receivedAmount ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "开票收款状态判定: requires valid receivedAmount (Decimal)" ;
+    ] ;
+    rdfs:comment """Rule: 开票收款状态判定. DSL: IF receivedAmount <= 0 THEN '未收款' ELSE IF receivedAmount >= invoiceAmount THEN '已收款' ELSE '部分收款' (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "根据有效收款累计相对开票金额判定开票处于未收款、部分收款或全部收齐" .
 
 od:RULE-CONTRACT-VOID-ELIGIBLEShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(approvedInvoiceCount == 0 AND validReceiptCount == 0
-) )
-        """ ;
+    sh:property [
+        sh:path od:approvedInvoiceCount ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "合同作废资格: requires valid approvedInvoiceCount (Integer)" ;
     ] ;
+    sh:property [
+        sh:path od:validReceiptCount ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "合同作废资格: requires valid validReceiptCount (Integer)" ;
+    ] ;
+    rdfs:comment """Rule: 合同作废资格. DSL: approvedInvoiceCount == 0 AND validReceiptCount == 0 (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断是否不存在已批准开票或有效收款，从而允许作废合同" .
 
 od:RULE-INVOICE-VOID-ELIGIBLEShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
+    sh:targetClass od:Receipt ;
+
     sh:sparql [
         sh:select """
             SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(validReceiptCount == 0
-) )
+            ?this od:validReceiptCount ?validReceiptCount .
+            FILTER (?validReceiptCount = 0)
+            }
         """ ;
     ] ;
+
+    sh:property [
+        sh:path od:validReceiptCount ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:message "开票作废资格: requires valid validReceiptCount (Integer)" ;
+    ] ;
+    rdfs:comment """Rule: 开票作废资格. DSL: validReceiptCount == 0 (pattern: Pattern1-Simple)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断开票是否存在有效收款，从而允许作废" .
 
 od:RULE-INVOICE-TAXRATE-CONSISTENTShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(invoiceTaxRate == contractTaxRate
-) )
-        """ ;
+    sh:property [
+        sh:path od:contractTaxRate ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "开票税率一致性: requires valid contractTaxRate (Decimal)" ;
     ] ;
+    sh:property [
+        sh:path od:invoiceTaxRate ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:message "开票税率一致性: requires valid invoiceTaxRate (Decimal)" ;
+    ] ;
+    rdfs:comment """Rule: 开票税率一致性. DSL: invoiceTaxRate == contractTaxRate (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断开票税率是否等于合同税率" .
 
 od:RULE-APPROVAL-SODShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(approverId != submitterId
-) )
-        """ ;
+    sh:property [
+        sh:path od:submitterId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "提交审批职责分离: requires valid submitterId (String)" ;
     ] ;
+    sh:property [
+        sh:path od:approverId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "提交审批职责分离: requires valid approverId (String)" ;
+    ] ;
+    rdfs:comment """Rule: 提交审批职责分离. DSL: approverId != submitterId (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断当前审批人是否不是该业务记录的提交人" .
 
 od:RULE-CONTRACT-SETTLEMENTShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(allStagesFullyInvoiced == true AND allInvoicesFullyReceived == true
-) )
-        """ ;
+    sh:property [
+        sh:path od:allStagesFullyInvoiced ;
+        sh:datatype xsd:boolean ;
+        sh:minCount 1 ;
+        sh:message "合同结清资格判定: requires valid allStagesFullyInvoiced (Boolean)" ;
     ] ;
+    sh:property [
+        sh:path od:allInvoicesFullyReceived ;
+        sh:datatype xsd:boolean ;
+        sh:minCount 1 ;
+        sh:message "合同结清资格判定: requires valid allInvoicesFullyReceived (Boolean)" ;
+    ] ;
+    rdfs:comment """Rule: 合同结清资格判定. DSL: allStagesFullyInvoiced == true AND allInvoicesFullyReceived == true (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断所有付款阶段是否均已足额开票，且所有已批准未作废开票均已全部收齐" .
 
 od:RULE-ALLOCATION-CONTRACT-CONSISTENTShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(allocationContractId == invoiceContractId
-) )
-        """ ;
+    sh:property [
+        sh:path od:invoiceContractId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "分摊所属合同一致性: requires valid invoiceContractId (String)" ;
     ] ;
+    sh:property [
+        sh:path od:allocationContractId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "分摊所属合同一致性: requires valid allocationContractId (String)" ;
+    ] ;
+    rdfs:comment """Rule: 分摊所属合同一致性. DSL: allocationContractId == invoiceContractId (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断分摊记录、开票和付款阶段是否属于同一合同" .
 
 od:RULE-RECEIPT-CONTRACT-CONSISTENTShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(receiptContractId == invoiceContractId
-) )
-        """ ;
+    sh:property [
+        sh:path od:receiptContractId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "收款所属合同一致性: requires valid receiptContractId (String)" ;
     ] ;
+    sh:property [
+        sh:path od:invoiceContractId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "收款所属合同一致性: requires valid invoiceContractId (String)" ;
+    ] ;
+    rdfs:comment """Rule: 收款所属合同一致性. DSL: receiptContractId == invoiceContractId (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断收款所选合同是否等于对应开票所属合同" .
 
 od:RULE-OWNER-DEPT-CONSISTENTShape
     a sh:NodeShape ;
-    sh:targetClass <https://ontology.ontology-driven.dev/v9#AggregateRoot> ;
-    sh:sparql [
-        sh:select """
-            SELECT ?this WHERE {
-                ?this a <https://ontology.ontology-driven.dev/v9#AggregateRoot> .
-                FILTER ( !(ownerDepartmentId == contractDepartmentId
-) )
-        """ ;
+    sh:property [
+        sh:path od:ownerDepartmentId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "责任人部门一致性: requires valid ownerDepartmentId (String)" ;
     ] ;
+    sh:property [
+        sh:path od:contractDepartmentId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:message "责任人部门一致性: requires valid contractDepartmentId (String)" ;
+    ] ;
+    rdfs:comment """Rule: 责任人部门一致性. DSL: ownerDepartmentId == contractDepartmentId (pattern: degraded)""" ;
+
     sh:severity sh:Violation ;
     sh:message "判断责任人所属部门是否等于合同所属部门" .
