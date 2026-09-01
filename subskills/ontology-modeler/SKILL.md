@@ -278,9 +278,9 @@ MetaSkill 步骤 11 (agent → ontology-modeler, models=[M5-perm,M6,MU], write_m
   ↓ with: { prior_models={M1, M2, M3, M5-actor, M7} }
   ↓ 追加 M5 权限块 + 产出 M6+MU + 写 manifest.json + manifest.jsonld
 
-MetaSkill 步骤 12 (skill_exec → model-validator scripts/gate.ps1)
-  ↓ 读 yaml/manifest.json 定位所有 YAML
-  ↓ 执行 6 条跨引用校验（Python 移植，退出码非 0 = 失败）
+MetaSkill 步骤 12 (skill_exec → model-validator scripts/validate_yaml_refs.py)
+  ↓ 读 yaml/manifest.json 定位所有 YAML + 派生 JSON-LD
+  ↓ 执行 6 条跨引用校验 + 3 条 JSON-LD 门禁（退出码非 0 = 失败）
   ↓ 失败则终止 DAG；全部通过则 final_text_mode 返回
 ```
 
@@ -293,4 +293,4 @@ MetaSkill 步骤 12 (skill_exec → model-validator scripts/gate.ps1)
 - 转换与校验工具：[`scripts/`](scripts/)（yaml2manifest / yaml2od_jsonld / yaml2m2jsonld / yaml2m3shacl / yaml2m6jsonld / validate / drift_check / sparql_queries；SHACL shapes 在 [`scripts/shacl/`](scripts/shacl/)）
 - 漂移守护 CI：[`../../.github/workflows/drift-check.yml`](../../.github/workflows/drift-check.yml)（每周一 cron：validate + drift + SHACL + SPARQL smoke）
 - 跨仓库集成路线：[`references/openclaw-integration.md`](references/openclaw-integration.md)（OpenClaw `ValidateJsonLdTool.cs` 改造路径 + MetaSkill step 12 wiring）
-- 跨引用门禁：[`../model-validator/`](../model-validator/)（步骤 12 `skill_exec` 的 6 条检查；Python 移植的语义参考实现是 OpenClaw 内置 ITool [`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)）
+- 跨引用门禁：[`../model-validator/`](../model-validator/)（步骤 12 `skill_exec` 的 6 条检查 + 3 条 JSON-LD 门禁；前 6 条语义参考实现是 OpenClaw 内置 ITool [`ValidateYamlReferencesTool.cs`](E:/GitHub/openclaw.net/src/OpenClaw.Agent/Tools/ValidateYamlReferencesTool.cs)，后 3 条经子进程复用本工具链）

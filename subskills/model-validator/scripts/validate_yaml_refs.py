@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-validate_yaml_refs.py — model-validator 跨引用门禁（6 条检查的 Python 移植）
+validate_yaml_refs.py — model-validator 跨引用门禁（6 条 YAML 检查 + 3 条 JSON-LD 门禁）
 
 把 OpenClaw ValidateYamlReferencesTool.cs 的 6 条检查语义移植为本地脚本，
-供 MetaSkill 步骤 12（skill_exec → scripts/gate.ps1）与 CI 调用。
+并把 openclaw-integration.md § 三 的 JSON-LD 门禁（词表路由解析 / SHACL /
+ID 集对称）一并纳入——后 3 条经子进程复用 ontology-modeler 既有验证器，
+不在本脚本内重复实现 JSON-LD 逻辑（单一事实来源）。
+供 MetaSkill 步骤 12（skill_exec → scripts/validate_yaml_refs.py）与 CI 调用。
 
 语义基准：根 SKILL.md 步骤 12 的 6 条 description（绑定语义）
 + ValidateYamlReferencesTool.cs（字段路径 / 违规判定 / 输出信封参考）。
-黄金范例 subskills/ontology-modeler/reference-example/ 全部 6 条 PASS。
+黄金范例 subskills/ontology-modeler/reference-example/ 全部 9 条 PASS。
 
 输入：
   validate_yaml_refs.py <yaml_dir> <manifest> [--check ID]... [--format json|text]
@@ -27,6 +30,7 @@ manifest 支持两种形态：model_files 数组（黄金范例 / C# 语义）�
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -54,7 +58,7 @@ FORMAL_REPORT_TYPES = {"LIST_QUERY", "DETAIL_QUERY", "STATISTICAL_QUERY", "REPOR
 # 条件语气词（check 6 与 C# ConditionalHints 一致，注意 "when "/"if "/"iff " 含尾随空格）
 CONDITIONAL_HINTS = ["如果", "若", "若果", "假如", "when ", "if ", "iff "]
 
-# 检查执行顺序 = C# CheckRegistry 注册顺序
+# 检查执行顺序 = C# CheckRegistry 注册顺序 + 3 条 JSON-LD 门禁
 CHECK_IDS = [
     "traceability",
     "query_mapping",
@@ -62,6 +66,22 @@ CHECK_IDS = [
     "acyclic_call_graph",
     "query_behavior_bidir",
     "rule_condition_separation",
+    "jsonld_parse",
+    "shacl",
+    "id_consistency",
+]
+
+# JSON-LD 门禁：经子进程委托 ontology-modeler 验证器（不重复实现其逻辑）
+JSONLD_CHECK_IDS = {"jsonld_parse", "shacl", "id_consistency"}
+
+TOOL_DIR = Path(__file__).resolve().parent.parent.parent / "ontology-modeler" / "scripts"
+
+# SHACL 形状对（数据文件 → 形状文件，与 CI drift-check.yml 一致）
+SHACL_PAIRS = [
+    ("m1-object-model.jsonld", "m1_aggregate_shape.ttl"),
+    ("m5-actor-model.jsonld", "m5_actor_shape.ttl"),
+    ("m6-flow-model.jsonld", "m6_flow_shape.ttl"),
+    ("m7-report-model.jsonld", "m7_report_shape.ttl"),
 ]
 
 
@@ -523,6 +543,126 @@ def check_rule_condition_separation(ids, models):
 
 
 # ──────────────────────────────────────────────────────────────
+# Check 7-9: JSON-LD 门禁（openclaw-integration.md § 三）
+# 经子进程委托 ontology-modeler 既有验证器；数据/形状缺失 → SKIP（前向兼容）。
+# ──────────────────────────────────────────────────────────────
+
+def _run(cmd):
+    """子进程执行；stdout/stderr 按 UTF-8 解码（ontology-modeler 脚本强制 UTF-8 输出）"""
+    proc = subprocess.run(cmd, capture_output=True)
+    out = proc.stdout.decode("utf-8", errors="replace")
+    err = proc.stderr.decode("utf-8", errors="replace")
+    return proc.returncode, out, err
+
+
+def _derived_jsonld(ctx):
+    """yaml_dir 中实际存在的派生 JSON-LD（.yaml → .jsonld）"""
+    derived = []
+    for fname in ctx["model_files"]:
+        if not fname.endswith(".yaml"):
+            continue
+        candidate = ctx["yaml_dir"] / (Path(fname).stem + ".jsonld")
+        if candidate.exists():
+            derived.append(candidate)
+    return derived
+
+
+def check_jsonld_parse(ids, models, ctx):
+    """统一入口 validate.py：rdflib 解析 + @context 词表路由（od: / meta:）
+    + M2 双层对账（含 yamlPointer 反向链接）+ manifest.jsonld 入口校验。"""
+    derived = _derived_jsonld(ctx)
+    if not derived:
+        return _result("jsonld_parse", "SKIP",
+                       "no derived JSON-LD files in yaml_dir (dual-track derivation missing)")
+    code, out, err = _run([
+        sys.executable, str(ctx["tool_dir"] / "validate.py"),
+        str(ctx["yaml_dir"]), "--format", "json",
+    ])
+    violations = []
+    try:
+        file_results = json.loads(out)
+    except json.JSONDecodeError:
+        file_results = []
+    for r in file_results:
+        if not isinstance(r, dict) or r.get("skipped") or r.get("passed"):
+            continue
+        lines = r.get("fail_lines") or r.get("stdout_lines") or []
+        detail = "; ".join(str(x) for x in lines)
+        detail = detail or r.get("error") or r.get("stderr") or f"exit {r.get('exit_code')}"
+        violations.append(_violation("JSON-LD", str(r.get("path", "")), "", detail))
+    if code == 0 and not violations:
+        return _result("jsonld_parse", "PASS",
+                       f"{len(derived)} derived JSON-LD file(s) parsed, vocab-routed, M2-aligned")
+    if not violations:
+        violations.append(_violation(
+            "JSON-LD", "validate.py", "", (out + err).strip() or f"exit {code}"))
+    return _result("jsonld_parse", "FAIL",
+                   f"{len(violations)} JSON-LD parse/alignment violation(s)", violations)
+
+
+def check_shacl(ids, models, ctx):
+    """按模型形状对跑 pyshacl（m1/m5/m6/m7）。形状未撰写 → 该模型跳过（与 CI 一致）；
+    M3 形状已派生但实例数据校验在 CI 黄金范例侧执行（运行工作区无 M3 实例数据）。"""
+    derived = _derived_jsonld(ctx)
+    if not derived:
+        return _result("shacl", "SKIP",
+                       "no derived JSON-LD files in yaml_dir (dual-track derivation missing)")
+    derived_names = {p.name for p in derived}
+    ran, skipped, violations = [], [], []
+    for data_name, shape_name in SHACL_PAIRS:
+        if data_name not in derived_names:
+            continue
+        shape = ctx["tool_dir"] / "shacl" / shape_name
+        if not shape.exists():
+            skipped.append(f"{data_name} (shape {shape_name} not yet authored)")
+            continue
+        code, out, err = _run([
+            sys.executable, str(ctx["tool_dir"] / "shacl" / "run_shacl.py"),
+            str(ctx["yaml_dir"] / data_name), str(shape),
+        ])
+        if code == 0:
+            ran.append(data_name)
+        else:
+            violations.append(_violation(
+                "SHACL", data_name, shape_name, (out + err).strip() or f"exit {code}"))
+    if not ran and not violations and skipped:
+        return _result("shacl", "SKIP", "; ".join(skipped))
+    if violations:
+        return _result("shacl", "FAIL", f"{len(violations)} SHACL violation(s)", violations)
+    msg = f"{len(ran)} model(s) conform to SHACL shapes"
+    if skipped:
+        msg += f"; skipped: {'; '.join(skipped)}"
+    return _result("shacl", "PASS", msg)
+
+
+def check_id_consistency(ids, models, ctx):
+    """drift_check.py：YAML ↔ JSON-LD ID 集对称（M1 aggregates、M5 actors+roles、
+    M7 query_reports；URN 项目段由 JSON-LD 自身检测）。"""
+    if not _derived_jsonld(ctx):
+        return _result("id_consistency", "SKIP",
+                       "no derived JSON-LD files in yaml_dir (dual-track derivation missing)")
+    code, out, err = _run([
+        sys.executable, str(ctx["tool_dir"] / "drift_check.py"), str(ctx["yaml_dir"]),
+    ])
+    if code == 0:
+        return _result("id_consistency", "PASS",
+                       "YAML ↔ JSON-LD ID sets symmetric (drift_check)")
+    violations = []
+    for line in out.strip().splitlines():
+        s = line.strip()
+        # "  M1: YAML-only = [...]" / "  M7: JSONLD-only = [...]" → 逐模型 violation
+        if not s.startswith("M") or ": " not in s:
+            continue
+        model, rest = s.split(": ", 1)
+        violations.append(_violation("DRIFT", model.strip(), "", rest.strip()))
+    if not violations:
+        violations.append(_violation(
+            "DRIFT", "drift_check.py", "", (out + err).strip() or f"exit {code}"))
+    return _result("id_consistency", "FAIL",
+                   f"{len(violations)} drift segment(s)", violations)
+
+
+# ──────────────────────────────────────────────────────────────
 # 输出与入口
 # ──────────────────────────────────────────────────────────────
 
@@ -533,6 +673,9 @@ CHECK_HANDLERS = {
     "acyclic_call_graph": check_acyclic_call_graph,
     "query_behavior_bidir": check_query_behavior_bidir,
     "rule_condition_separation": check_rule_condition_separation,
+    "jsonld_parse": check_jsonld_parse,
+    "shacl": check_shacl,
+    "id_consistency": check_id_consistency,
 }
 
 
@@ -564,7 +707,7 @@ def render_text(payload):
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="model-validator 6 条跨引用门禁")
+    parser = argparse.ArgumentParser(description="model-validator 跨引用门禁（6 条 YAML + 3 条 JSON-LD）")
     parser.add_argument("yaml_dir", help="7 模型 YAML 所在目录")
     parser.add_argument("manifest", help="manifest.json 路径（绝对或相对 yaml_dir）")
     parser.add_argument("--check", action="append", choices=CHECK_IDS,
@@ -582,11 +725,19 @@ def main() -> int:
             payload = error_envelope(e.error_code, str(e))
         else:
             ids = extract_id_sets(models)
+            ctx = {
+                "yaml_dir": yaml_dir,
+                "tool_dir": TOOL_DIR,
+                "model_files": loaded_files,
+            }
             check_ids = args.check or CHECK_IDS
             results = []
             for cid in check_ids:
                 try:
-                    results.append(CHECK_HANDLERS[cid](ids, models))
+                    if cid in JSONLD_CHECK_IDS:
+                        results.append(CHECK_HANDLERS[cid](ids, models, ctx))
+                    else:
+                        results.append(CHECK_HANDLERS[cid](ids, models))
                 except Exception as e:  # 单检查异常不得中断整体（对齐 C# try/catch per check）
                     results.append(_result(
                         cid, "FAIL",

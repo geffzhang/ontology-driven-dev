@@ -155,16 +155,18 @@ for each jsonLdFile in jsonLdFiles:
 
 ## 四、MetaSkill 步骤 12 调用方式
 
-当前 MetaSkill 步骤 12 为 `skill_exec`（YAML 通道），entrypoint 指向本仓库
-`subskills/model-validator/scripts/gate.ps1`，6 条检查的 Python 移植
-`validate_yaml_refs.py` 语义对齐 `ValidateYamlReferencesTool.cs`（来源见
+当前 MetaSkill 步骤 12 为 `skill_exec`，entrypoint 指向本仓库
+`subskills/model-validator/scripts/validate_yaml_refs.py`——单入口同时覆盖
+YAML 通道（6 条跨引用检查，Python 移植自 `ValidateYamlReferencesTool.cs`）
+与 JSON-LD 通道（3 条门禁，经子进程委托 ontology-modeler 验证器，
+即本文档 § 三 路由策略的本地实现；来源见
 [`SKILL.md` § 五](../../SKILL.md#五tool_call-与-skill_exec-实现)）：
 
 ```yaml
 - id: validate_cross_refs
   kind: skill_exec
   skill: model-validator
-  skill_exec_entrypoint: scripts/gate.ps1
+  skill_exec_entrypoint: scripts/validate_yaml_refs.py
   skill_exec_parse_mode: json
   skill_exec_args:
     - "{{ inputs.workspace_dir }}/yaml"
@@ -174,40 +176,27 @@ for each jsonLdFile in jsonLdFiles:
 > 演进记录：步骤 12 原为 `tool_call → validate_yaml_references`（OpenClaw 内置 C# 工具），
 > 后改为 `skill_exec → model-validator`（本地 Python 门禁，退出码非 0 = 步骤失败），
 > 使校验逻辑与 Skill 同仓演进，不必等待 openclaw.net 发版。
+> 2026-09-01：JSON-LD 门禁（jsonld_parse / shacl / id_consistency）并入同一脚本，
+> `scripts/gate.ps1` shim 移除，entrypoint 直接指向 .py。
 
-### 4.1 未来两步走（YAML → YAML + JSON-LD 并行）
+### 4.1 JSON-LD 门禁的本地落位（阶段 6 前置）
 
-```yaml
-# 当前 — 仅 YAML 通道（skill_exec）
-- id: validate_cross_refs
-  kind: skill_exec
-  skill: model-validator
-  skill_exec_entrypoint: scripts/gate.ps1
-  skill_exec_parse_mode: json
-  skill_exec_args:
-    - "{{ inputs.workspace_dir }}/yaml"
-    - "{{ outputs.p2_flows_ui.manifest_path }}"
+```text
+validate_yaml_refs.py（model-validator entrypoint）
+├─ check 1-6：YAML 跨引用（自研逻辑，移植自 ValidateYamlReferencesTool.cs）
+└─ check 7-9：JSON-LD 门禁（子进程编排，单一事实来源在 ontology-modeler 脚本）
+   ├─ jsonld_parse   → validate.py（@context 词表路由 + M2 双层对账 + manifest.jsonld）
+   ├─ shacl          → shacl/run_shacl.py（m1/m5/m6/m7 形状对）
+   └─ id_consistency → drift_check.py（YAML ↔ JSON-LD ID 集对称）
 ```
 
-```yaml
-# 阶段 6（spec 路线图）— YAML + JSON-LD 双通道
-- id: validate_cross_refs_yaml
-  kind: skill_exec
-  skill: model-validator
-  skill_exec_entrypoint: scripts/gate.ps1
-  skill_exec_parse_mode: json
-
-- id: validate_cross_refs_jsonld
-  kind: tool_call
-  tool: validate_json_ld         # ← ValidateJsonLdTool.Name
-  tool_allowlist: [validate_json_ld]
-  with:
-    jsonLdFiles: "{{ outputs.p2_flows_ui.manifest_path | jsonld_paths }}"  # 由 manifest 反查
-    vocabStrategy: "od"             # 默认 od；M6 文件单独传 meta
-```
-
-> **阶段 6 计划不变**：在 MetaSkill `SKILL.md` 加 `validate_json_ld` 步骤；
-> JSON-LD 门禁也可在 `model-validator` Skill 内新增 entrypoint 承载（见其 SKILL.md § 六）。
+> 与 § 三 的关系：上图即 `ValidateJsonLdTool` 拟实现的 check 面
+> （jsonld_parse / shacl_* / id_consistency / manifest_xref）在本地 Python
+> 门禁中的落位——M6 ≤12 步硬约束由 `validate_m6jsonld.py`（meta: 路由）、
+> M3 规则形状由 `m3-rule-model.shacl.ttl` 承担，均在 `jsonld_parse` / CI 烟雾中覆盖。
+> 派生 JSON-LD 缺失或 SHACL 形状未撰写时对应检查 `SKIP`（前向兼容，不视为失败）。
+> 阶段 6 的 openclaw.net `ValidateJsonLdTool` 因此**待重估**：
+> 运行时门禁功能面已被 Python 覆盖，C# 工具是否仍需提 PR 由阶段 6 决策（见 § 七）。
 
 ### 4.2 OpenClaw 工具分发
 
@@ -311,6 +300,6 @@ OpenClaw 运行时按 `ITool.Name` 字面量（`StringComparer.Ordinal` 严格�
 ## 七、当前状态
 
 - [x] **本仓库**：本文档已落地（Task 11 唯一产物）
-- [ ] **openclaw.net**：`ValidateJsonLdTool.cs` 待 PR（**不在本工作树实施**）
-- [x] **本仓库 MetaSkill SKILL.md**：步骤 12 已改为 `skill_exec → model-validator`（Python 门禁，见 § 四）；阶段 6 的 `validate_json_ld` 步骤待加
+- [ ] **openclaw.net**：`ValidateJsonLdTool.cs` 待阶段 6 重估（Python 门禁已覆盖其 check 面，见 § 4.1；**不在本工作树实施**）
+- [x] **本仓库 MetaSkill SKILL.md**：步骤 12 已改为 `skill_exec → model-validator scripts/validate_yaml_refs.py`——YAML 6 条 + JSON-LD 3 条门禁单入口（见 § 四）
 - [ ] **Task 12 AC5**：跨仓库回归测试，待 openclaw.net 端 PR 合入后跑现有 YAML 测试不破（`ValidateYamlReferencesTool.cs` 的 6-check 单测不受本仓库变更影响）

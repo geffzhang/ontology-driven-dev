@@ -74,6 +74,20 @@ def jsonld_ids(path):
     return {str(s) for s in g.subjects() if str(s).startswith("urn:od:")}
 
 
+def project_segment(urns):
+    """Detect the 'urn:od:<project>:' segment from the JSON-LD URN set.
+
+    PoC 曾硬编码 contract-mgmt；model-validator 运行时工作区可能使用其他项目段。
+    取出现次数最多的第二段（urn:od:<proj>:...）；无数据时回退 contract-mgmt。
+    """
+    counts = {}
+    for u in urns:
+        parts = u.split(":")
+        if len(parts) >= 4 and parts[0] == "urn" and parts[1] == "od":
+            counts[parts[2]] = counts.get(parts[2], 0) + 1
+    return max(counts, key=counts.get) if counts else "contract-mgmt"
+
+
 def main():
     yaml_dir = Path(sys.argv[1] if len(sys.argv) > 1 else "yaml/")
     if not yaml_dir.exists():
@@ -88,8 +102,10 @@ def main():
             continue
         y_local = yaml_ids(yaml_file, sections)
         j_all = jsonld_ids(jsonld_file)
+        # Project segment detected from the JSON-LD URNs themselves (not hardcoded)
+        proj = project_segment(j_all)
         # Build expected YAML-side URNs by prefixing model id
-        y_urns = {f"urn:od:contract-mgmt:{m_id}:{v}" for v in y_local}
+        y_urns = {f"urn:od:{proj}:{m_id}:{v}" for v in y_local}
         # Restrict JSON-LD set to URNs carrying the same model id AND one of
         # the tracked prefixes (AGG-/ACTOR-/ROLE-/REP-). JSON-LD also contains
         # derived/secondary entities (ASSOC-, DICT-, BIZ_TYPE, PERM-, ...) that
@@ -98,8 +114,8 @@ def main():
         tracked_prefixes = tuple(p for _, _, p in sections)
         j_for_model = {
             u for u in j_all
-            if u.startswith(f"urn:od:contract-mgmt:{m_id}:")
-            and u.split(f"urn:od:contract-mgmt:{m_id}:", 1)[1].startswith(tracked_prefixes)
+            if u.startswith(f"urn:od:{proj}:{m_id}:")
+            and u.split(f"urn:od:{proj}:{m_id}:", 1)[1].startswith(tracked_prefixes)
         }
         only_y = y_urns - j_for_model
         only_j = j_for_model - y_urns
