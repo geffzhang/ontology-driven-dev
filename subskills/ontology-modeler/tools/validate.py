@@ -130,9 +130,31 @@ def validate_manifest(jsonld_path: Path) -> dict:
 
 
 def validate_m2_yaml_jsonld_alignment(yaml_path: Path, jsonld_path: Path) -> dict:
-    """M2 双层对账：每个 YAML behavior 都在 JSON-LD 中存在且 yamlPointer 反向可定位"""
-    yaml_data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
-    yaml_ids = {b["id"] for b in yaml_data.get("behaviors", [])}
+    """M2 双层对账 + yamlPointer 反向链接验证
+
+    两层校验：
+    1. ID 集对称 — YAML behaviors[].id 与 JSON-LD od:Behavior/od:id 一一对应
+    2. yamlPointer 反向 — JSON-LD 每条 od:yamlPointer 形如
+       #yaml/<filename>#behaviors[<id>]，<id> 必须真实存在于传入的 yaml_path 中
+       （filename 字段也需与 yaml_path.basename 一致，否则记为一致性问题但仍用 yaml_path 校验）
+    """
+    # ── 加载 yaml_path（后续 ID 对称 & 反向链接都依赖它）
+    try:
+        yaml_data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as e:
+        return {
+            "passed": False,
+            "stdout_lines": [
+                f"[FAIL] M2 yamlPointer 解析失败: {yaml_path.name} — {e}"
+            ],
+        }
+
+    yaml_by_id = {
+        b["id"]: b
+        for b in yaml_data.get("behaviors", [])
+        if isinstance(b, dict) and "id" in b
+    }
+    yaml_ids = set(yaml_by_id.keys())
 
     g = Graph()
     with open(jsonld_path, encoding="utf-8") as f:
@@ -140,17 +162,65 @@ def validate_m2_yaml_jsonld_alignment(yaml_path: Path, jsonld_path: Path) -> dic
     OD = Namespace("https://ontology.ontology-driven.dev/v9#")
     jsonld_ids = {str(g.value(s, OD.id)) for s in g.subjects(RDF.type, OD.Behavior)}
 
+    stdout_lines = []
+    passed = True
+
+    # ── 检查 1：ID 集对称
     missing_in_jsonld = yaml_ids - jsonld_ids
     missing_in_yaml = jsonld_ids - yaml_ids
     if missing_in_jsonld or missing_in_yaml:
-        return {
-            "passed": False,
-            "stdout_lines": [f"[FAIL] M2 漂移: yaml-仅={missing_in_jsonld}, jsonld-仅={missing_in_yaml}"],
-        }
-    return {
-        "passed": True,
-        "stdout_lines": [f"[OK] M2 双层对账: {len(yaml_ids)} behaviors 一致"],
-    }
+        stdout_lines.append(
+            f"[FAIL] M2 ID 漂移: yaml-仅={sorted(missing_in_jsonld)}, jsonld-仅={sorted(missing_in_yaml)}"
+        )
+        passed = False
+    else:
+        stdout_lines.append(f"[OK] M2 双层对账: {len(yaml_ids)} behaviors 一致")
+
+    # ── 检查 2：yamlPointer 反向链接解析
+    resolved_count = 0
+    pointer_fails = []
+
+    for s in g.subjects(RDF.type, OD.Behavior):
+        yp = g.value(s, OD.yamlPointer)
+        if yp is None:
+            pointer_fails.append(f"[FAIL] M2 yamlPointer 缺失: subject={s}")
+            continue
+        yp_str = str(yp)
+        # 解析 #yaml/<filename>#behaviors[<id>]
+        try:
+            tail = yp_str.split("#yaml/", 1)[1]
+            yaml_filename, rest = tail.split("#behaviors[", 1)
+            behavior_id = rest.split("]", 1)[0]
+        except (IndexError, ValueError):
+            pointer_fails.append(f"[FAIL] M2 yamlPointer 格式错误: {yp_str}")
+            continue
+
+        # 一致性检查：yamlPointer 文件名 vs 传入 yaml_path.basename
+        if yaml_filename != yaml_path.name:
+            pointer_fails.append(
+                f"[FAIL] M2 yamlPointer 文件不一致: 指向 {yaml_filename}，传入 {yaml_path.name}"
+            )
+            # 仍按 yaml_path 校验 behavior_id
+            if behavior_id not in yaml_by_id:
+                pointer_fails.append(f"[FAIL] M2 yamlPointer 断裂: {behavior_id}")
+            else:
+                resolved_count += 1
+            continue
+
+        if behavior_id not in yaml_by_id:
+            pointer_fails.append(f"[FAIL] M2 yamlPointer 断裂: {behavior_id}")
+            continue
+        resolved_count += 1
+
+    if not pointer_fails:
+        stdout_lines.append(
+            f"[OK] M2 yamlPointer: {resolved_count} reverse-links resolved"
+        )
+    else:
+        stdout_lines.extend(pointer_fails)
+        passed = False
+
+    return {"passed": passed, "stdout_lines": stdout_lines}
 
 
 def collect_targets(target: Path) -> list:
