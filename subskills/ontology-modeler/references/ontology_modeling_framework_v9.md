@@ -2035,7 +2035,7 @@ yaml/
 
 ## 十一、JSON-LD 序列化约定
 
-本框架支持 YAML → JSON-LD 双轨输出，详见 [spec § 三 双轨制策略](../specs/2026-09-01-yaml-to-jsonld-design.md)。
+本框架支持 YAML → JSON-LD 双轨输出，详见 [spec § 三 双轨制策略](../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md)。
 
 ### 11.1 双轨制对照
 
@@ -2065,8 +2065,8 @@ yaml/
 
 ### 11.4 验证与转换工具
 
-参见 [tools/README.md](../../tools/README.md)。
+参见 [tools/README.md](../tools/README.md)。
 
 ### 11.5 引用 spec
 
-- YAML → JSON-LD 迁移 spec：[2026-09-01-yaml-to-jsonld-design.md](../../specs/2026-09-01-yaml-to-jsonld-design.md)
+- YAML → JSON-LD 迁移 spec：[2026-09-01-yaml-to-jsonld-design.md](../../../docs/superpowers/specs/2026-09-01-yaml-to-jsonld-design.md)
