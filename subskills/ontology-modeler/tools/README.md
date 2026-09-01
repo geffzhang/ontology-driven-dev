@@ -5,7 +5,7 @@
 ## 工具清单
 
 | 工具 | 角色 | 输入 | 输出 |
-|---|---|---|---|
+| --- |---| --- |---|
 | `yaml2m6jsonld.py` | M6 YAML → JSON-LD 转换器（meta: 词表） | `m6-flow-model.yaml` | `m6-flow-model.jsonld` |
 | `yaml2od_jsonld.py` | M1/M5/M7 YAML → JSON-LD 转换器（od: 词表） | `m{1,5,7}-*-model.yaml` | `m{1,5,7}-*-model.jsonld` |
 | `validate_m6jsonld.py` | M6 JSON-LD 验证（单文件） | `m6-flow-model.jsonld` | exit 0/1 + 行输出 |
@@ -36,14 +36,14 @@ python tools/validate.py reference-example/m6-flow-model.jsonld
 ### 退出码
 
 | Code | 含义 |
-|---|---|
+| --- |---|
 | 0 | 全部 JSON-LD 通过；YAML 被 SKIPPED（除非 --strict） |
 | 1 | 至少一个 JSON-LD 验证失败 |
 | 2 | 配置错误（路径不存在 / --strict 下有 SKIPPED） |
 
 ### 路由逻辑
 
-```
+```text
 file.suffix
   ├─ .jsonld  →  read @context IRI
   │   ├─ "https://openclaw.dev/meta/v1#"           → validate_m6jsonld.py
@@ -70,7 +70,7 @@ file.suffix
 **两者关系**：互补，不重叠。
 
 | 维度 | `ValidateYamlReferencesTool` (C#) | `validate.py` (Python) |
-|---|---|---|
+| --- |---| --- |
 | 验证对象 | YAML | JSON-LD |
 | 词表 | 不绑定词表 | 绑定 od: / meta: 词表 IRI |
 | 调度方 | OpenClaw 运行时（agent step） | 本地 CLI / CI |
@@ -116,7 +116,7 @@ python tools/sparql_queries.py --all
 ### 5 个查询
 
 | ID | 跨文件 | 答案 |
-|---|---|---|
+| --- |---| --- |
 | Q1 | M6 + M5 + M2 | M6 step 用到的 role + behavior（14 行） |
 | Q2 | M7 → M1 → 字典 | REP-CONTRACT-LIST 关联的所有字典项（3 行） |
 | Q3 | M5 + M2 | ACTOR-SALES 持有的 8 个 permission |
@@ -126,7 +126,7 @@ python tools/sparql_queries.py --all
 ## 当前 PoC 状态
 
 | 验证器 / 工具 | 黄金范例 | 状态 |
-|---|---|---|
+| --- |---| --- |
 | `validate_m6jsonld.py` | 4 flows | ✅ PASS |
 | `validate_od_jsonld.py` | M1=23 / M5=39 / M7=5 节点 | ✅ PASS |
 | `validate.py` 统一入口 | 4 jsonld + 7 yaml | ✅ PASS（exit 0） |
@@ -138,7 +138,7 @@ python tools/sparql_queries.py --all
 ## 后续路线（来自 spec）
 
 | 阶段 | 任务 |
-|---|---|
+| --- |---|
 | 5 | `pyshacl` SHACL 校验集成；补全 `od:DictionaryType.items[]` / `od:Report.joins` / 双向 Actor-Role 引用 |
 | 6 | 把 `validate_od_jsonld.py` + `validate_m6jsonld.py` 整合到 ontology-modeler 的内置 step（本目录） |
 
