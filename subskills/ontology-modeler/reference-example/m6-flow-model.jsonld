@@ -1,0 +1,459 @@
+{
+  "@context": {
+    "@vocab": "https://openclaw.dev/meta/v1#",
+    "meta": "https://openclaw.dev/meta/v1#",
+    "od": "https://ontology.ontology-driven.dev/v9#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@graph": [
+    {
+      "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001",
+      "@type": "meta:Flow",
+      "meta:id": "FLOW-CONTRACT-001",
+      "meta:name": "合同全生命周期流程",
+      "meta:flowType": "COLLABORATION",
+      "meta:description": "从合同创建、审批、生效、开票和收款到合同关闭的端到端协同流程",
+      "meta:businessObjectRefs": [
+        "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+        "urn:od:contract-mgmt:M1:AGG-INVOICE-001",
+        "urn:od:contract-mgmt:M1:AGG-RECEIPT-001"
+      ],
+      "meta:roleRefs": [
+        "urn:od:contract-mgmt:M5:ROLE-SALES",
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE",
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER",
+        "urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER"
+      ],
+      "meta:preconditions": [
+        "销售合同已完成线下签字盖章，具备登记条件"
+      ],
+      "meta:postconditions": [
+        "合同已归档或流程已明确终止"
+      ],
+      "meta:startActivity": "A01",
+      "meta:hasStep": [
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A01",
+          "@type": "meta:Step",
+          "meta:id": "A01",
+          "meta:label": "开始",
+          "meta:kind": "start"
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A02",
+          "@type": "meta:Step",
+          "meta:id": "A02",
+          "meta:label": "创建合同（保存草稿/提交审批）",
+          "meta:kind": "user_input",
+          "meta:permissionRef": "urn:od:contract-mgmt:M5:ROLE-SALES",
+          "meta:skill": "urn:od:contract-mgmt:M2:Contract_Submit",
+          "meta:dependsOn": [
+            "A01"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A03",
+          "@type": "meta:Step",
+          "meta:id": "A03",
+          "meta:label": "合同登记审批",
+          "meta:kind": "skill_exec",
+          "meta:skill": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001",
+          "meta:dependsOn": [
+            "A02"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04",
+          "@type": "meta:Step",
+          "meta:id": "A04",
+          "meta:label": "审批结果判断",
+          "meta:kind": "llm_classify",
+          "meta:outputChoices": [
+            "APPROVE",
+            "REJECT",
+            "TERMINATE"
+          ],
+          "meta:dependsOn": [
+            "A03"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A05",
+          "@type": "meta:Step",
+          "meta:id": "A05",
+          "meta:label": "开票与收款循环",
+          "meta:kind": "skill_exec",
+          "meta:skill": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002"
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A06",
+          "@type": "meta:Step",
+          "meta:id": "A06",
+          "meta:label": "合同结清判断",
+          "meta:kind": "llm_classify",
+          "meta:outputChoices": [
+            "RULE-CONTRACT-SETTLEMENT",
+            "未结清，继续开票收款"
+          ],
+          "meta:dependsOn": [
+            "A05"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A07",
+          "@type": "meta:Step",
+          "meta:id": "A07",
+          "meta:label": "合同结清（由同步联动自动触发）",
+          "meta:kind": "agent",
+          "meta:skill": "urn:od:contract-mgmt:M2:Contract_UpdateSettlementStatus"
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A08",
+          "@type": "meta:Step",
+          "meta:id": "A08",
+          "meta:label": "合同作废或归档",
+          "meta:kind": "user_input",
+          "meta:permissionRef": "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER",
+          "meta:skill": "urn:od:contract-mgmt:M2:Contract_VoidOrArchive",
+          "meta:dependsOn": [
+            "A07"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A09",
+          "@type": "meta:Step",
+          "meta:id": "A09",
+          "meta:label": "结束",
+          "meta:kind": "end",
+          "meta:dependsOn": [
+            "A08"
+          ]
+        }
+      ],
+      "meta:trigger": {
+        "triggerType": "MANUAL"
+      }
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002",
+      "@type": "meta:Flow",
+      "meta:id": "FLOW-CONTRACT-INVOICE-002",
+      "meta:name": "合同开票与收款流程",
+      "meta:flowType": "COLLABORATION",
+      "meta:description": "根据客户付款通知完成开票审批、付款阶段占用、收款登记和状态联动",
+      "meta:businessObjectRefs": [
+        "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+        "urn:od:contract-mgmt:M1:AGG-INVOICE-001",
+        "urn:od:contract-mgmt:M1:AGG-RECEIPT-001"
+      ],
+      "meta:roleRefs": [
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE",
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER"
+      ],
+      "meta:preconditions": [
+        "合同已纳入管理且客户已发出付款通知"
+      ],
+      "meta:postconditions": [
+        "本次有效开票已全部收齐，或开票审批终止/开票作废"
+      ],
+      "meta:startActivity": "B01",
+      "meta:hasStep": [
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B01",
+          "@type": "meta:Step",
+          "meta:id": "B01",
+          "meta:label": "开始",
+          "meta:kind": "start"
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B02",
+          "@type": "meta:Step",
+          "meta:id": "B02",
+          "meta:label": "开票登记（保存草稿/提交审批）",
+          "meta:kind": "user_input",
+          "meta:permissionRef": "urn:od:contract-mgmt:M5:ROLE-FINANCE",
+          "meta:skill": "urn:od:contract-mgmt:M2:Invoice_Submit",
+          "meta:dependsOn": [
+            "B01"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B03",
+          "@type": "meta:Step",
+          "meta:id": "B03",
+          "meta:label": "开票审批",
+          "meta:kind": "skill_exec",
+          "meta:skill": "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002",
+          "meta:dependsOn": [
+            "B02"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04",
+          "@type": "meta:Step",
+          "meta:id": "B04",
+          "meta:label": "审批结果判断",
+          "meta:kind": "llm_classify",
+          "meta:outputChoices": [
+            "APPROVE",
+            "REJECT",
+            "TERMINATE"
+          ],
+          "meta:dependsOn": [
+            "B03"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B05",
+          "@type": "meta:Step",
+          "meta:id": "B05",
+          "meta:label": "更新付款阶段开票状态（同步联动自动触发）",
+          "meta:kind": "agent",
+          "meta:skill": "urn:od:contract-mgmt:M2:PaymentStage_UpdateInvoiceStatus"
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B06",
+          "@type": "meta:Step",
+          "meta:id": "B06",
+          "meta:label": "录入收款",
+          "meta:kind": "user_input",
+          "meta:permissionRef": "urn:od:contract-mgmt:M5:ROLE-FINANCE",
+          "meta:skill": "urn:od:contract-mgmt:M2:Receipt_Record",
+          "meta:dependsOn": [
+            "B05"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B07",
+          "@type": "meta:Step",
+          "meta:id": "B07",
+          "meta:label": "更新开票收款状态（同步联动自动触发）",
+          "meta:kind": "agent",
+          "meta:skill": "urn:od:contract-mgmt:M2:Invoice_UpdateReceiptStatus",
+          "meta:dependsOn": [
+            "B06"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B08",
+          "@type": "meta:Step",
+          "meta:id": "B08",
+          "meta:label": "开票是否全部收齐",
+          "meta:kind": "llm_classify",
+          "meta:outputChoices": [
+            "RULE-INVOICE-RECEIPT-STATUS",
+            "未收齐，继续收款"
+          ],
+          "meta:dependsOn": [
+            "B07"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B09",
+          "@type": "meta:Step",
+          "meta:id": "B09",
+          "meta:label": "结束",
+          "meta:kind": "end"
+        }
+      ],
+      "meta:trigger": {
+        "triggerType": "MANUAL"
+      }
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001",
+      "@type": "meta:Flow",
+      "meta:id": "FLOW-CONTRACT-APPROVAL-001",
+      "meta:name": "合同登记审批",
+      "meta:flowType": "APPROVAL",
+      "meta:description": "合同先由财务经理审批，金额大于等于100万元时增加总经理审批",
+      "meta:businessObjectRefs": [
+        "urn:od:contract-mgmt:M1:AGG-CONTRACT-001"
+      ],
+      "meta:roleRefs": [
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER",
+        "urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER"
+      ],
+      "meta:preconditions": [
+        "contract.status == '待财务经理审批'"
+      ],
+      "meta:postconditions": [
+        "合同审批通过、驳回或终止"
+      ],
+      "meta:startActivity": "P01",
+      "meta:hasStep": [
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P01",
+          "@type": "meta:Step",
+          "meta:id": "P01",
+          "meta:label": "开始",
+          "meta:kind": "start"
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P02",
+          "@type": "meta:Step",
+          "meta:id": "P02",
+          "meta:label": "财务经理审批",
+          "meta:kind": "user_input",
+          "meta:permissionRef": "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER",
+          "meta:skill": "urn:od:contract-mgmt:M2:Contract_ApproveFinance",
+          "meta:enum": [
+            "APPROVE",
+            "REJECT"
+          ],
+          "meta:dependsOn": [
+            "P01"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P03",
+          "@type": "meta:Step",
+          "meta:id": "P03",
+          "meta:label": "财务审批结果判断",
+          "meta:kind": "llm_classify",
+          "meta:outputChoices": [
+            "REJECT",
+            "APPROVE"
+          ],
+          "meta:dependsOn": [
+            "P02"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P04",
+          "@type": "meta:Step",
+          "meta:id": "P04",
+          "meta:label": "大额合同判断",
+          "meta:kind": "llm_classify",
+          "meta:outputChoices": [
+            "RULE-CONTRACT-APPROVAL-LEVEL",
+            "普通金额合同"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P05",
+          "@type": "meta:Step",
+          "meta:id": "P05",
+          "meta:label": "总经理审批",
+          "meta:kind": "user_input",
+          "meta:permissionRef": "urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER",
+          "meta:skill": "urn:od:contract-mgmt:M2:Contract_ApproveGeneralManager",
+          "meta:enum": [
+            "APPROVE",
+            "REJECT"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P06",
+          "@type": "meta:Step",
+          "meta:id": "P06",
+          "meta:label": "标记审批通过（合同已纳入管理）",
+          "meta:kind": "agent",
+          "meta:skill": "urn:od:contract-mgmt:M2:Contract_ApproveGeneralManager",
+          "meta:dependsOn": [
+            "P05"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P07",
+          "@type": "meta:Step",
+          "meta:id": "P07",
+          "meta:label": "审批通过结束",
+          "meta:kind": "end",
+          "meta:dependsOn": [
+            "P06"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P08",
+          "@type": "meta:Step",
+          "meta:id": "P08",
+          "meta:label": "驳回结束",
+          "meta:kind": "end"
+        }
+      ],
+      "meta:trigger": {
+        "triggerType": "BEHAVIOR",
+        "behaviorRef": "Contract_Submit"
+      }
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002",
+      "@type": "meta:Flow",
+      "meta:id": "FLOW-INVOICE-APPROVAL-002",
+      "meta:name": "开票审批",
+      "meta:flowType": "APPROVAL",
+      "meta:description": "开票由财务经理单节点审批",
+      "meta:businessObjectRefs": [
+        "urn:od:contract-mgmt:M1:AGG-INVOICE-001"
+      ],
+      "meta:roleRefs": [
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER"
+      ],
+      "meta:preconditions": [
+        "invoice.approvalStatus == '待财务经理审批'"
+      ],
+      "meta:postconditions": [
+        "开票审批通过、驳回或终止"
+      ],
+      "meta:startActivity": "Q01",
+      "meta:hasStep": [
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q01",
+          "@type": "meta:Step",
+          "meta:id": "Q01",
+          "meta:label": "开始",
+          "meta:kind": "start"
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q02",
+          "@type": "meta:Step",
+          "meta:id": "Q02",
+          "meta:label": "财务经理审批",
+          "meta:kind": "user_input",
+          "meta:permissionRef": "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER",
+          "meta:skill": "urn:od:contract-mgmt:M2:Invoice_ApproveFinance",
+          "meta:enum": [
+            "APPROVE",
+            "REJECT"
+          ],
+          "meta:dependsOn": [
+            "Q01"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q03",
+          "@type": "meta:Step",
+          "meta:id": "Q03",
+          "meta:label": "审批结果判断",
+          "meta:kind": "llm_classify",
+          "meta:outputChoices": [
+            "APPROVE",
+            "REJECT"
+          ],
+          "meta:dependsOn": [
+            "Q02"
+          ]
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q04",
+          "@type": "meta:Step",
+          "meta:id": "Q04",
+          "meta:label": "审批通过结束（开票已批准）",
+          "meta:kind": "end"
+        },
+        {
+          "@id": "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q05",
+          "@type": "meta:Step",
+          "meta:id": "Q05",
+          "meta:label": "驳回结束",
+          "meta:kind": "end"
+        }
+      ],
+      "meta:trigger": {
+        "triggerType": "BEHAVIOR",
+        "behaviorRef": "Invoice_Submit"
+      }
+    }
+  ]
+}
