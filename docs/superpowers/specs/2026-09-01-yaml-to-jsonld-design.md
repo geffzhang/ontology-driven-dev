@@ -24,7 +24,7 @@ JSON-LD 作为 W3C 标准的链接数据序列化格式，是上述问题的标�
 
 - **M1/M3/M5/M7** 走 JSON-LD（数据语义 + 形式化验证）；
 - **M2** 走双层：元数据迁 JSON-LD，控制流留 YAML；
-- **M6** 用 OpenClaw **MetaSkill `composition.steps`** 表达（与 ontology-driven-dev 自身 12 步 DAG 同构）；
+- **M6** 用 JSON-LD 表达，**复用 OpenClaw MetaSkill `composition.steps` 词表**（不造新词表，不生成 SKILL.md）；
 - **MU** 保留 JSON（A2UI/MCP App 各自规范）。
 
 ## 二、目标与非目标
@@ -36,12 +36,12 @@ JSON-LD 作为 W3C 标准的链接数据序列化格式，是上述问题的标�
 - **G3**：M2 行为的元数据层迁 JSON-LD，控制流层（preconditions/postconditions/syncTriggers）保留 YAML 或专用 JSON
 - **G4**：`manifest.json` 升级为 JSON-LD 顶层入口文档（`@context` + `@graph`）
 - **G5**：`ValidateYamlReferencesTool` 增加 JSON-LD 校验通道（不替换 YAML 校验）
-- **G6**：迁移过程不破坏 V9 现有表达力，M2/MU 仍可用 YAML 编辑与 review；M6 用 MetaSkill 表达后可直接被 OpenClaw MetaSkill 运行时调度
+- **G6**：迁移过程不破坏 V9 现有表达力，M2/MU 仍可用 YAML 编辑与 review；M6 用 JSON-LD 表达 MetaSkill 语义，不生成 SKILL.md（OpenClaw 运行时仍按 YAML 路径调度）
 
 ### 2.2 非目标
 
 - **N1**：不删除任何 YAML 文件——YAML 永远是"人读源"
-- **N2**：M6 流程模型**不直接迁 JSON-LD**，而是用 MetaSkill `composition.steps` 表达（详见 § 四）；不强行发明 M6 专用 JSON-LD 词表
+- **N2**：M6 流程模型**不另造词表**，而是用 JSON-LD 复用 OpenClaw MetaSkill `composition.steps` 词表（详见 § 四）；**不生成 SKILL.md**——OpenClaw 运行时仍按 YAML 路径调度
 - **N3**：MU UI 模型不迁 JSON-LD——A2UI/MCP App 各自规范已是 JSON，再包一层 JSON-LD 是噪声
 - **N4**：本设计**不**引入 OWL 推理——若未来需要，本 spec 之外另行评估
 - **N5**：本设计**不**替代 V9 规范本体——JSON-LD 是序列化约定，不是新框架
@@ -57,125 +57,150 @@ JSON-LD 作为 W3C 标准的链接数据序列化格式，是上述问题的标�
 | M7 查询报表 | 绑 M2 行为 | 中 | ✅ 轻量迁（仅元数据） |
 | M3 规则 | 条件-结论 | 中 | ✅ 用 SHACL 表达 |
 | M2 行为 | 控制流 + 状态机 | 中低 | ⚠️ 双层：元数据迁 / 控制流留 YAML |
-| M6 流程 | 端到端协同 / 审批流 | 🆕 高（MetaSkill） | ✅ 用 MetaSkill `composition.steps` 表达（详见 § 四） |
+| M6 流程 | 端到端协同 / 审批流 | 🆕 高（MetaSkill 词表复用） | ✅ 用 JSON-LD 表达，复用 MetaSkill `composition.steps` 词表（详见 § 四） |
 | MU UI | AI 原生交互 | 低 | ❌ 不迁，保留 JSON（A2UI/MCP App 各自规范） |
 
-**核心原则**：JSON-LD 价值集中在"数据语义 + 跨系统链接"，不应强行覆盖"控制流 + 渲染"。**控制流语义优先复用 OpenClaw MetaSkill**（与 M6 天然对应），不另造 JSON-LD 词表。
+**核心原则**：JSON-LD 价值集中在"数据语义 + 跨系统链接"，不应强行覆盖"控制流 + 渲染"。**控制流语义通过复用 OpenClaw MetaSkill 词表 IRI 表达**——M6 JSON-LD 在 `@context` 引入 `https://openclaw.dev/meta/v1#`，复用 `meta:Step` / `meta:agent` / `meta:user_input` 等现成词表，**不另造词表，不生成 SKILL.md**。
 
-## 四、M6 → MetaSkill 映射规则
+## 四、M6 → MetaSkill 语义 JSON-LD 表达
 
-OpenClaw MetaSkill 的 `composition.steps` 是一个**天然适合表达 M6 流程模型的语义模型**：它的 7 种 step kind（`llm_chat` / `llm_classify` / `agent` / `tool_call` / `skill_exec` / `user_input` / `fan_out`）覆盖了 M6 端到端流 + 审批流所需的全部节点类型。M6 流程不需要新造 JSON-LD 词表，而是映射为**可被 OpenClaw MetaSkill 运行时直接调度**的子 MetaSkill。
+M6 流程不需要新造 JSON-LD 词表，而是在 `@context` 中**复用 MetaSkill 词表 IRI**（`https://openclaw.dev/meta/v1#`，暂定），直接用 MetaSkill 现成谓词（`meta:Step` / `meta:agent` / `meta:user_input` / `meta:dependsOn` 等）表达端到端流。
 
-### 4.1 概念映射表
+**M6 输出是一份 JSON-LD 文件**，OpenClaw MetaSkill 运行时仍按原 YAML 路径调度，**不生成 SKILL.md**。这样既复用 MetaSkill 语义（统一理解），又保持 JSON-LD 表达力（机器消费）。
 
-| M6 概念 | MetaSkill 对应 | 备注 |
-|---|---|---|
-| 端到端流（`flow`） | `kind: meta` + `composition.steps` | 整个流即一个 MetaSkill（受 12 步上限约束） |
-| 系统活动（`systemTask`） | `kind: agent` 或 `kind: skill_exec` | 调 M2 行为 / 子 Skill |
-| 人工任务（`userTask`） | `kind: user_input` + `clarify` | 表单 schema = user_input fields |
-| 审批节点（`approvalNode`） | `kind: user_input`，枚举审批结果 | 强门禁必经 |
-| 排他网关（`exclusiveGateway`） | `kind: llm_classify` + `route` | output_choices 即分支 |
-| 并行网关（`parallelGateway`） | 多个 step 无 `depends_on` | wave 调度天然并行 |
-| 子流程调用（`subFlowRef`） | `kind: skill_exec` 嵌套 | 子 MetaSkill 同样 ≤ 12 步 |
-| 同步执行顺序 | `depends_on: [<prev_step_id>]` | DAG 边 |
-| 错误处理 | `on_failure: <fallback_step>` | 5 条约束仍适用 |
-| 失败跳过 | `continue_on_error: true` | 同 |
-| 重试策略 | `retry: { max_attempts, backoff_ms }` | 同 |
-| 超时 | `timeout_seconds: <N>` | 同 |
-| 暂停等人工确认 | `kind: user_input` | 三簇硬门禁天然对应 |
+### 4.1 概念映射表（YAML → JSON-LD，复用 MetaSkill 词表）
 
-### 4.2 黄金范例对照（伪 YAML → MetaSkill YAML）
+| M6 YAML 概念 | M6 JSON-LD 表达（用 MetaSkill 词表） |
+|---|---|
+| 端到端流 `flow` | `@type: meta:Flow`，`meta:name` |
+| 节点 `nodes[]` | `meta:hasStep` 数组 |
+| 系统活动 `systemTask` | `@type: meta:Step` + `meta:kind: "agent"` + `meta:skill` |
+| 人工任务 `userTask` | `@type: meta:Step` + `meta:kind: "user_input"` |
+| 审批节点 `approvalNode` | `@type: meta:Step` + `meta:kind: "user_input"` + `meta:enum: [...]` |
+| 排他网关 `exclusiveGateway` | `@type: meta:Step` + `meta:kind: "llm_classify"` + `meta:outputChoices` |
+| 并行网关 `parallelGateway` | 多个 `meta:Step` 无 `meta:dependsOn` |
+| 子流程 `subFlowRef` | `@type: meta:Step` + `meta:kind: "skill_exec"` + `meta:skill` |
+| 同步顺序 `dependsOn` | `meta:dependsOn: [<step_id>]` |
+| 条件 `when` | `meta:when: "<jinja expr>"` |
+| 错误处理 | `meta:onFailure: <fallback_id>` |
+| 失败跳过 | `meta:continueOnError: true` |
+| 重试策略 | `meta:retry: { maxAttempts, backoffMs }` |
+| 超时 | `meta:timeoutSeconds: <N>` |
+| 角色引用 `roleRef` | `meta:permissionRef`（指向 M5 JSON-LD） |
+| 行为引用 `behaviorRef` | `meta:skill`（指向 M2 JSON-LD） |
+| 规则引用 `ruleRef` | `meta:toolArgs: { ruleRef: RULE-X }`（指向 M3 SHACL） |
 
-M6 `flow` 元素（伪 YAML）：
+### 4.2 黄金范例对照（YAML → JSON-LD with meta: 词表）
+
+M6 YAML：
 
 ```yaml
 flows:
   - id: FLOW-CONTRACT-APPROVAL
     name: 合同登记审批流
     nodes:
-      - type: userTask
-        roleRef: ROLE-CONTRACT-CREATOR
-      - type: approvalNode
+      - id: save_draft
+        type: systemTask
+        behaviorRef: Contract_SaveAsDraft
+      - id: finance_approve
+        type: approvalNode
         roleRef: ROLE-FINANCE-MANAGER
         choices: [approve, reject]
-      - type: approvalNode
+        dependsOn: [save_draft]
+      - id: gm_approve
+        type: approvalNode
         roleRef: ROLE-GENERAL-MANAGER
         condition: totalAmount > THRESHOLD
+        dependsOn: [finance_approve]
 ```
 
-映射为 MetaSkill `SKILL.md`：
+M6 JSON-LD（**复用 MetaSkill 词表，不生成 SKILL.md**）：
 
-```yaml
----
-name: flow-contract-approval
-kind: meta
-description: 销售合同登记审批端到端流
-composition:
-  steps:
-    - id: save_draft
-      kind: agent
-      skill: contract-save-draft
-      with:
-        contractId: "{{ inputs.contractId }}"
-    - id: finance_approve
-      kind: user_input
-      depends_on: [save_draft]
-      clarify:
-        mode: form
-        fields:
-          - name: decision
-            type: enum
-            options: [approve, reject]
-            required: true
-          - name: comment
-            type: string
-            max_length: 500
-    - id: gm_approve
-      kind: user_input
-      depends_on: [finance_approve]
-      when: "outputs.finance_approve.decision == 'approve' AND inputs.totalAmount > THRESHOLD"
-      clarify:
-        mode: form
-        fields:
-          - name: decision
-            type: enum
-            options: [approve, reject]
-            required: true
-    - id: persist_result
-      kind: tool_call
-      tool: write_file
-      depends_on: [finance_approve, gm_approve]
+```json
+{
+  "@context": {
+    "@vocab": "https://openclaw.dev/meta/v1#",
+    "meta": "https://openclaw.dev/meta/v1#",
+    "od": "https://ontology.ontology-driven.dev/v9#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  },
+  "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL",
+  "@type": "meta:Flow",
+  "meta:name": "合同登记审批流",
+  "meta:hasStep": [
+    {
+      "@id": "urn:od:contract-mgmt:M6:step-save-draft",
+      "@type": "meta:Step",
+      "meta:id": "save_draft",
+      "meta:kind": "agent",
+      "meta:skill": "urn:od:contract-mgmt:M2:Contract_SaveAsDraft"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M6:step-finance-approve",
+      "@type": "meta:Step",
+      "meta:id": "finance_approve",
+      "meta:kind": "user_input",
+      "meta:permissionRef": "urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-FINANCE",
+      "meta:enum": ["approve", "reject"],
+      "meta:dependsOn": ["save_draft"]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M6:step-gm-approve",
+      "@type": "meta:Step",
+      "meta:id": "gm_approve",
+      "meta:kind": "user_input",
+      "meta:permissionRef": "urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-GM",
+      "meta:enum": ["approve", "reject"],
+      "meta:dependsOn": ["finance_approve"],
+      "meta:when": "outputs.finance_approve.decision == 'approve' AND inputs.totalAmount > THRESHOLD"
+    }
+  ]
+}
 ```
 
 ### 4.3 与 ontology-driven-dev 自带的同构
 
-值得注意：`ontology-driven-dev` 本身就是 12 步 DAG MetaSkill，每个 p1/p2 步骤都用 `depends_on` 串接。这本身就是 M6 端到端流的**最佳活范例**——M6 黄金范例应直接对照 ontology-driven-dev 的步骤结构编写。
+ontology-driven-dev 本身就是 12 步 DAG MetaSkill，每个 p1/p2 步骤都用 `depends_on` 串接。M6 黄金范例应直接对照 ontology-driven-dev 的步骤结构编写——但**只复用其语义词表到 JSON-LD**，不复制其 SKILL.md。
 
-### 4.4 M6 跨模型引用 → MetaSkill 引用
+### 4.4 12 步上限约束（SHACL 校验）
 
-| M6 引用字段 | MetaSkill 表达 | 落地依据 |
-|---|---|---|
-| `roleRef: ROLE-X` | `kind: user_input` 的 `permissionRef` 字段（语义对位） | M5 role/permission JSON-LD |
-| `behaviorRef: Contract_Submit` | `kind: agent`，`skill: contract-submit` | M2 behavior JSON-LD |
-| `subFlowRef: FLOW-X` | `kind: skill_exec`，`skill: flow-x` | M6 nested MetaSkill |
-| `ruleRef: RULE-X` | `kind: tool_call`，`tool: evaluate_rule`，`with.ruleRef: RULE-X` | M3 rule SHACL |
+OpenClaw MetaSkill 规定单 MetaSkill **不超过 12 步**。该约束在 M6 JSON-LD 中以 SHACL 形状校验：
 
-### 4.5 12 步上限约束
+```turtle
+meta:FlowShape a sh:NodeShape ;
+  sh:targetClass meta:Flow ;
+  sh:property [
+    sh:path meta:hasStep ;
+    sh:maxCount 12 ;
+    sh:message "M6 flow 步骤数 ≤ 12，超出请拆分子流"@zh ] .
+```
 
-OpenClaw MetaSkill 规定单 MetaSkill **不超过 12 步**（meta-skills.md §"何时使用 MetaSkill"）。若 M6 流程超过 12 步，必须：
+ontology-modeler 阶段 5 应在生成 M6 JSON-LD 后立即执行此 SHACL 校验，超出则 fail-fast。
 
-1. 拆为多个子 MetaSkill（`kind: skill_exec` 嵌套调用）
-2. 或用 `fan_out` 动态展开
-3. ontology-modeler 在生成 M6 时应**主动告警** `flow_step_count > 12`，建议拆分子流
+### 4.5 落盘约定（单层 JSON-LD）
 
-### 4.6 双层落盘约定
+- **人读 YAML**：`yaml/m6-flow-model.yaml`（保留 V9 原 schema，供 review/编辑）
+- **机读 JSON-LD**：`yaml/m6-flow-model.jsonld`（复用 MetaSkill 词表，机器消费）
 
-每个 M6 流程生成两份产物：
+**不生成 SKILL.md**。OpenClaw MetaSkill 运行时仍按 `yaml/m6-flow-model.yaml` 路径调度；JSON-LD 用于：
 
-1. **人读 YAML**：`yaml/m6-flow-model.yaml`（保留 V9 原 schema，供 review/编辑）
-2. **机读 MetaSkill**：`flows/<flow-id>/SKILL.md`（可被 OpenClaw MetaSkill 运行时直接调度）
+1. 跨系统 linked data 交换
+2. SPARQL 查询（M6 流程与 M2/M5/M3 引用关系）
+3. SHACL 验证（步骤数 ≤ 12、引用存在性等）
 
-manifest.jsonld 用 `od:flowMetaSkillRef` 关联 YAML 与 SKILL.md，确保两者 ID 一致性由对账机制保证（§ 八）。
+### 4.6 manifest 关联
+
+manifest.jsonld 用 `od:m6JsonLdRef` 关联 YAML 与 JSON-LD：
+
+```json
+{
+  "@id": "urn:od:contract-mgmt:M6",
+  "@type": "od:M6FlowModel",
+  "od:yamlSource": "yaml/m6-flow-model.yaml",
+  "od:jsonLdSource": "yaml/m6-flow-model.jsonld",
+  "od:context": "https://openclaw.dev/meta/v1#",
+  "od:vocabularyStrategy": "reuse"
+```
 
 ## 五、词表设计（od: Ontology-Driven Vocabulary）
 
@@ -245,17 +270,21 @@ od:UiUnit a rdfs:Class ;
   rdfs:label "UI Unit"@zh .
 ```
 
-### 4.3 上下文（@context）示例
+### 5.3 上下文（@context）示例
+
+M1/M3/M5/M7 JSON-LD 使用 od: + 标准 RDF 词表：
 
 ```json
 {
   "@context": {
     "@vocab": "https://ontology.ontology-driven.dev/v9#",
     "od": "https://ontology.ontology-driven.dev/v9#",
+    "meta": "https://openclaw.dev/meta/v1#",
     "skos": "http://www.w3.org/2004/02/skos/core#",
     "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
     "xsd": "http://www.w3.org/2001/XMLSchema#",
     "prov": "http://www.w3.org/ns/prov#",
+    "sh": "http://www.w3.org/ns/shacl#",
     "label": "rdfs:label",
     "type": "@type",
     "id": "@id",
@@ -264,6 +293,21 @@ od:UiUnit a rdfs:Class ;
   }
 }
 ```
+
+**M6 JSON-LD 复用 MetaSkill 词表**（`meta:` 前缀）：
+
+```json
+{
+  "@context": {
+    "@vocab": "https://openclaw.dev/meta/v1#",
+    "meta": "https://openclaw.dev/meta/v1#",
+    "od": "https://ontology.ontology-driven.dev/v9#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#"
+  }
+}
+```
+
+M6 不新增 `od:` 词表——所有 M6 节点类型（`meta:Flow` / `meta:Step`）与谓词（`meta:hasStep` / `meta:dependsOn` / `meta:kind` / `meta:skill` / `meta:permissionRef` / `meta:when` / `meta:onFailure` / `meta:retry` / `meta:timeoutSeconds`）都来自 MetaSkill 词表 IRI。
 
 ## 六、Manifest 升级设计
 
@@ -301,10 +345,13 @@ od:UiUnit a rdfs:Class ;
       "od:format": "application/json",
       "od:reason": "AI-native UI model; A2UI/MCP App spec-defined; YAML or A2UI catalog is the canonical form" }
   ],
-  "od:flowMetaSkillRef": [
-    { "@id": "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL",
+  "od:m6JsonLdRef": [
+    { "@id": "urn:od:contract-mgmt:M6",
+      "@type": "od:M6FlowModel",
       "od:yamlSource": "yaml/m6-flow-model.yaml",
-      "od:metaskillPath": "flows/flow-contract-approval/SKILL.md",
+      "od:jsonLdSource": "yaml/m6-flow-model.jsonld",
+      "od:context": "https://openclaw.dev/meta/v1#",
+      "od:vocabularyStrategy": "reuse",
       "od:stepCount": 4 }
   ]
 }
@@ -367,20 +414,20 @@ od:UiUnit a rdfs:Class ;
   - `subskills/ontology-modeler/reference-example/m2-behavior-model.jsonld`（仅元数据）
 - **退出标准**：JSON-LD 中每个 `od:Behavior` 节点可通过 `@id` 反向定位到 YAML 控制流块
 
-### 阶段 5：M7 轻量迁 + M6 → MetaSkill 表达 + MU 不迁
+### 阶段 5：M7 轻量迁 + M6 → MetaSkill 语义 JSON-LD + MU 不迁
 
 - **任务**：
   - M7 元数据迁 JSON-LD（`od:Report` + `od:boundBehavior`）
-  - **M6 流程生成 `flows/<flow-id>/SKILL.md`**（按 § 四 映射规则），同时保留 `yaml/m6-flow-model.yaml` 作为人读源
-  - manifest `od:notMigrated` 仅留 MU；M6 通过 `od:flowMetaSkillRef` 关联 YAML 与 SKILL.md
-  - ValidateYamlReferencesTool 增加 `validate_metaskill_skill_md` 通道：
-    - `kind: meta` 与 `composition.steps` 存在性
-    - `depends_on` 目标存在
-    - 步骤数 ≤ 12（meta-skills.md "何时使用 MetaSkill" 约束）
+  - **M6 流程生成 `yaml/m6-flow-model.jsonld`**，复用 MetaSkill 词表 IRI（不生成 SKILL.md）
+  - manifest `od:m6JsonLdRef` 关联 YAML 与 JSON-LD
+  - ValidateYamlReferencesTool 增加 `validate_jsonld_metaskill` 通道：
+    - M6 JSON-LD 的 `@context` 引用 `https://openclaw.dev/meta/v1#`
+    - `meta:hasStep` 数组长度 ≤ 12（meta-skills.md 约束）
+    - `meta:dependsOn` 目标存在
 - **产出**：
   - `subskills/ontology-modeler/reference-example/m7-report-model.jsonld`
-  - `subskills/ontology-modeler/reference-example/flows/flow-contract-approval/SKILL.md`（黄金范例对照）
-- **退出标准**：M6 黄金范例生成可被 OpenClaw MetaSkill 运行时直接调度的 SKILL.md；M7 元数据迁完
+  - `subskills/ontology-modeler/reference-example/m6-flow-model.jsonld`（复用 `meta:` 词表）
+- **退出标准**：M6 黄金范例的 JSON-LD 通过 dotNetRDF + SHACL 验证（含 stepCount ≤ 12）；M7 元数据迁完
 
 ### 阶段 6：验证器统一（长期）
 
@@ -392,15 +439,14 @@ od:UiUnit a rdfs:Class ;
 
 ## 八、双向对账机制
 
-为防止 YAML 与 JSON-LD / MetaSkill 并存期间出现漂移，需建立对账流程：
+为防止 YAML 与 JSON-LD 并存期间出现漂移，需建立对账流程：
 
-1. **写盘前**：ontology-modeler 步骤 9/10/11 完成后，立即派生 JSON-LD（M1/M3/M5/M7）和 MetaSkill SKILL.md（M6）
+1. **写盘前**：ontology-modeler 步骤 9/10/11 完成后，立即派生 JSON-LD（M1/M2 元数据/M3/M5/M6/M7）
 2. **CI 门禁**：
    - YAML 与 JSON-LD 的 `@id` 集合必须一致
    - JSON-LD 必通过 JSON-LD Processor（compaction / expansion）测试
-   - SHACL 必 `sh:conforms true`
-   - **M6 YAML 的 flow.id 与对应 MetaSkill SKILL.md 的 `name` 必须一致**
-   - **M6 MetaSkill 的 step 数 ≤ 12，否则 fail-fast**
+   - SHACL 必 `sh:conforms true`（M1 不变量 + M3 规则 + **M6 `meta:hasStep` ≤ 12**）
+   - **M6 YAML 的 `flow.id` 与对应 JSON-LD 节点的 `@id` 一致**
 3. **漂移检测**：每周 cron 比对 git diff，若漂移自动告警
 
 ## 九、风险与权衡
@@ -411,14 +457,15 @@ od:UiUnit a rdfs:Class ;
 | dotNetRDF 在 AOT 下的兼容性 | ValidateYamlReferencesTool AOT 友好性丢失 | 参考现有 `IsAotCompatible=true` 设计，使用反射无关 API |
 | YAML ↔ JSON-LD 互转信息损失 | 双轨漂移 | 阶段 2 锁定对账基线；保留 YAML 注释映射 |
 | M2 双层结构增加学习成本 | 用户需理解"元数据 vs 控制流"分层 | 在规范文档显式说明，并在 SKILL.md 增章节 |
-| M6 MetaSkill 表达增加理解成本 | 用户需理解 MetaSkill DAG 才能 review M6 | 在规范文档 V9.1 §10 增 "M6 → MetaSkill 映射示例"，引用 ontology-driven-dev 自身 12 步 DAG 作为活范例 |
-| M6 流程超过 12 步上限 | MetaSkill 校验器拒绝 | ontology-modeler 生成时主动告警 + 拆分子流建议；提供 `fan_out` 嵌套模板 |
-| M6 YAML 与 MetaSkill SKILL.md 双层落盘 | 双层漂移风险 | § 八 对账机制强制 `flow.id ↔ SKILL.md.name` + step 数 ≤ 12 校验 |
+| M6 JSON-LD 复用 MetaSkill 词表增加理解成本 | 用户需理解 MetaSkill DAG 词表才能 review M6 JSON-LD | 在规范文档 V9.1 §10 增 "M6 → MetaSkill JSON-LD 映射示例"，引用 ontology-driven-dev 自身 12 步 DAG 作为活范例 |
+| M6 流程超过 12 步上限 | SHACL 校验器拒绝 | ontology-modeler 生成时主动告警 + 拆分子流建议；提供 `fan_out` 嵌套模板 |
+| M6 YAML ↔ JSON-LD 漂移 | 双层漂移风险 | § 八 对账机制强制 `flow.id ↔ @id` + SHACL stepCount ≤ 12 校验 |
+| MetaSkill 词表 IRI 暂未注册 | 引用稳定性差 | 阶段性使用 `https://openclaw.dev/meta/v1#`，待 OpenClaw 官方词表稳定后同步 |
 | 6 阶段路径偏慢 | 短期内无可见收益 | 每个阶段独立交付价值：阶段 1 即可被外部 JSON-LD 工具消费 |
 
 ## 十、验收标准
 
-- **AC1**：7 个模型 YAML 中：M1/M3/M5/M7 有 JSON-LD 输出；M2 有 JSON-LD 元数据层 + YAML 控制流层；**M6 有 MetaSkill SKILL.md + YAML 双层**；MU 仅在 manifest `od:notMigrated` 显式说明
+- **AC1**：7 个模型 YAML 中：M1/M3/M5/M7 有 JSON-LD 输出（用 `od:` + 标准 RDF 词表）；M2 有 JSON-LD 元数据层 + YAML 控制流层；**M6 有 JSON-LD 输出（复用 `meta:` 词表，不生成 SKILL.md）** + YAML 人读源；MU 仅在 manifest `od:notMigrated` 显式说明
 - **AC2**：JSON-LD 通过 dotNetRDF + 任意标准 JSON-LD Processor（jsonld.js / pyld）解析测试
 - **AC3**：M1 不变量通过 SHACL 验证
 - **AC4**：M3 规则通过 SHACL 验证
