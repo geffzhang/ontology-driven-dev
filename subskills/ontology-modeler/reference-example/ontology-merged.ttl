@@ -1,0 +1,1932 @@
+@prefix meta: <https://openclaw.dev/meta/v1#> .
+@prefix od: <https://ontology.ontology-driven.dev/v9#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+od:RULE-ALLOCATION-CONTRACT-CONSISTENTShape a sh:NodeShape ;
+    rdfs:comment "Rule: 分摊所属合同一致性. DSL: allocationContractId == invoiceContractId (pattern: degraded)" ;
+    sh:message "判断分摊记录、开票和付款阶段是否属于同一合同" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:message "分摊所属合同一致性: requires valid invoiceContractId (String)" ;
+            sh:minCount 1 ;
+            sh:path od:invoiceContractId ],
+        [ sh:datatype xsd:string ;
+            sh:message "分摊所属合同一致性: requires valid allocationContractId (String)" ;
+            sh:minCount 1 ;
+            sh:path od:allocationContractId ] ;
+    sh:severity sh:Violation .
+
+od:RULE-APPROVAL-SODShape a sh:NodeShape ;
+    rdfs:comment "Rule: 提交审批职责分离. DSL: approverId != submitterId (pattern: degraded)" ;
+    sh:message "判断当前审批人是否不是该业务记录的提交人" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:message "提交审批职责分离: requires valid submitterId (String)" ;
+            sh:minCount 1 ;
+            sh:path od:submitterId ],
+        [ sh:datatype xsd:string ;
+            sh:message "提交审批职责分离: requires valid approverId (String)" ;
+            sh:minCount 1 ;
+            sh:path od:approverId ] ;
+    sh:severity sh:Violation .
+
+od:RULE-CONTRACT-APPROVAL-LEVELShape a sh:NodeShape ;
+    rdfs:comment "Rule: 合同审批层级判定. DSL: totalAmount >= 1000000 (pattern: Pattern1-Simple)" ;
+    sh:message "判断合同含税总金额是否大于等于 100 万元，决定是否需要总经理审批" ;
+    sh:property [ sh:datatype xsd:decimal ;
+            sh:message "合同审批层级判定: requires valid totalAmount (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:totalAmount ] ;
+    sh:severity sh:Violation ;
+    sh:sparql [ sh:select """
+            SELECT ?this WHERE {
+            ?this od:totalAmount ?totalAmount .
+            FILTER (?totalAmount >= 1000000)
+            }
+        """ ] ;
+    sh:targetClass od:Contract .
+
+od:RULE-CONTRACT-INVOICE-ELIGIBLEShape a sh:NodeShape ;
+    rdfs:comment "Rule: 合同可开票资格. DSL: contractStatus == '已纳入管理' OR contractStatus == '已结清' (pattern: Pattern3-OR-chain)" ;
+    sh:message "判断合同是否已纳入管理且未作废、未归档，从而允许开票" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:message "合同可开票资格: requires valid contractStatus (Enum)" ;
+            sh:minCount 1 ;
+            sh:path od:contractStatus ] ;
+    sh:severity sh:Violation ;
+    sh:sparql [ sh:select """
+            SELECT ?this WHERE {
+            ?this od:contractStatus ?contractStatus .
+            FILTER (!(?contractStatus = "已纳入管理" || ?contractStatus = "已结清"))
+            }
+        """ ] ;
+    sh:targetClass od:Contract .
+
+od:RULE-CONTRACT-SETTLEMENTShape a sh:NodeShape ;
+    rdfs:comment "Rule: 合同结清资格判定. DSL: allStagesFullyInvoiced == true AND allInvoicesFullyReceived == true (pattern: degraded)" ;
+    sh:message "判断所有付款阶段是否均已足额开票，且所有已批准未作废开票均已全部收齐" ;
+    sh:property [ sh:datatype xsd:boolean ;
+            sh:message "合同结清资格判定: requires valid allInvoicesFullyReceived (Boolean)" ;
+            sh:minCount 1 ;
+            sh:path od:allInvoicesFullyReceived ],
+        [ sh:datatype xsd:boolean ;
+            sh:message "合同结清资格判定: requires valid allStagesFullyInvoiced (Boolean)" ;
+            sh:minCount 1 ;
+            sh:path od:allStagesFullyInvoiced ] ;
+    sh:severity sh:Violation .
+
+od:RULE-CONTRACT-VOID-ELIGIBLEShape a sh:NodeShape ;
+    rdfs:comment "Rule: 合同作废资格. DSL: approvedInvoiceCount == 0 AND validReceiptCount == 0 (pattern: degraded)" ;
+    sh:message "判断是否不存在已批准开票或有效收款，从而允许作废合同" ;
+    sh:property [ sh:datatype xsd:integer ;
+            sh:message "合同作废资格: requires valid validReceiptCount (Integer)" ;
+            sh:minCount 1 ;
+            sh:path od:validReceiptCount ],
+        [ sh:datatype xsd:integer ;
+            sh:message "合同作废资格: requires valid approvedInvoiceCount (Integer)" ;
+            sh:minCount 1 ;
+            sh:path od:approvedInvoiceCount ] ;
+    sh:severity sh:Violation .
+
+od:RULE-INVOICE-RECEIPT-STATUSShape a sh:NodeShape ;
+    rdfs:comment "Rule: 开票收款状态判定. DSL: IF receivedAmount <= 0 THEN '未收款' ELSE IF receivedAmount >= invoiceAmount THEN '已收款' ELSE '部分收款' (pattern: degraded)" ;
+    sh:message "根据有效收款累计相对开票金额判定开票处于未收款、部分收款或全部收齐" ;
+    sh:property [ sh:datatype xsd:decimal ;
+            sh:message "开票收款状态判定: requires valid receivedAmount (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:receivedAmount ],
+        [ sh:datatype xsd:decimal ;
+            sh:message "开票收款状态判定: requires valid invoiceAmount (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:invoiceAmount ] ;
+    sh:severity sh:Violation .
+
+od:RULE-INVOICE-REMAIN-RECEIPT-QUOTAShape a sh:NodeShape ;
+    rdfs:comment "Rule: 开票剩余可收款额度. DSL: historicalReceipt + currentReceipt <= invoiceAmount (pattern: degraded)" ;
+    sh:message "判断本次收款加历史有效收款是否不超过开票金额" ;
+    sh:property [ sh:datatype xsd:decimal ;
+            sh:message "开票剩余可收款额度: requires valid currentReceipt (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:currentReceipt ],
+        [ sh:datatype xsd:decimal ;
+            sh:message "开票剩余可收款额度: requires valid historicalReceipt (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:historicalReceipt ],
+        [ sh:datatype xsd:decimal ;
+            sh:message "开票剩余可收款额度: requires valid invoiceAmount (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:invoiceAmount ] ;
+    sh:severity sh:Violation .
+
+od:RULE-INVOICE-TAXRATE-CONSISTENTShape a sh:NodeShape ;
+    rdfs:comment "Rule: 开票税率一致性. DSL: invoiceTaxRate == contractTaxRate (pattern: degraded)" ;
+    sh:message "判断开票税率是否等于合同税率" ;
+    sh:property [ sh:datatype xsd:decimal ;
+            sh:message "开票税率一致性: requires valid invoiceTaxRate (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:invoiceTaxRate ],
+        [ sh:datatype xsd:decimal ;
+            sh:message "开票税率一致性: requires valid contractTaxRate (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:contractTaxRate ] ;
+    sh:severity sh:Violation .
+
+od:RULE-INVOICE-VOID-ELIGIBLEShape a sh:NodeShape ;
+    rdfs:comment "Rule: 开票作废资格. DSL: validReceiptCount == 0 (pattern: Pattern1-Simple)" ;
+    sh:message "判断开票是否存在有效收款，从而允许作废" ;
+    sh:property [ sh:datatype xsd:integer ;
+            sh:message "开票作废资格: requires valid validReceiptCount (Integer)" ;
+            sh:minCount 1 ;
+            sh:path od:validReceiptCount ] ;
+    sh:severity sh:Violation ;
+    sh:sparql [ sh:select """
+            SELECT ?this WHERE {
+            ?this od:validReceiptCount ?validReceiptCount .
+            FILTER (?validReceiptCount = 0)
+            }
+        """ ] ;
+    sh:targetClass od:Receipt .
+
+od:RULE-OWNER-DEPT-CONSISTENTShape a sh:NodeShape ;
+    rdfs:comment "Rule: 责任人部门一致性. DSL: ownerDepartmentId == contractDepartmentId (pattern: degraded)" ;
+    sh:message "判断责任人所属部门是否等于合同所属部门" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:message "责任人部门一致性: requires valid contractDepartmentId (String)" ;
+            sh:minCount 1 ;
+            sh:path od:contractDepartmentId ],
+        [ sh:datatype xsd:string ;
+            sh:message "责任人部门一致性: requires valid ownerDepartmentId (String)" ;
+            sh:minCount 1 ;
+            sh:path od:ownerDepartmentId ] ;
+    sh:severity sh:Violation .
+
+od:RULE-PAYSTAGE-REMAIN-QUOTAShape a sh:NodeShape ;
+    rdfs:comment "Rule: 付款阶段剩余可开票额度. DSL: historicalAllocation + currentAllocation <= stageAmount (pattern: degraded)" ;
+    sh:message "判断本次分摊加历史有效分摊是否不超过阶段应付金额" ;
+    sh:property [ sh:datatype xsd:decimal ;
+            sh:message "付款阶段剩余可开票额度: requires valid historicalAllocation (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:historicalAllocation ],
+        [ sh:datatype xsd:decimal ;
+            sh:message "付款阶段剩余可开票额度: requires valid currentAllocation (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:currentAllocation ],
+        [ sh:datatype xsd:decimal ;
+            sh:message "付款阶段剩余可开票额度: requires valid stageAmount (Decimal)" ;
+            sh:minCount 1 ;
+            sh:path od:stageAmount ] ;
+    sh:severity sh:Violation .
+
+od:RULE-RECEIPT-CONTRACT-CONSISTENTShape a sh:NodeShape ;
+    rdfs:comment "Rule: 收款所属合同一致性. DSL: receiptContractId == invoiceContractId (pattern: degraded)" ;
+    sh:message "判断收款所选合同是否等于对应开票所属合同" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:message "收款所属合同一致性: requires valid receiptContractId (String)" ;
+            sh:minCount 1 ;
+            sh:path od:receiptContractId ],
+        [ sh:datatype xsd:string ;
+            sh:message "收款所属合同一致性: requires valid invoiceContractId (String)" ;
+            sh:minCount 1 ;
+            sh:path od:invoiceContractId ] ;
+    sh:severity sh:Violation .
+
+<urn:od:contract-mgmt:M1:AGG-APPROVAL-001> a od:AggregateRoot ;
+    od:alias "ApprovalRecord" ;
+    od:description "记录合同登记审批和开票审批的人工处理历史" ;
+    od:hasAttribute [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "审批记录编号" ;
+            od:name "approvalRecordNo" ;
+            od:required true ;
+            od:unique true ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "审批意见" ;
+            od:name "approvalComment" ;
+            od:required false ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "DictionaryRef" ;
+            od:dictionaryRef [ od:dictionaryId "DICT-BIZ-TYPE" ;
+                    od:typeCode "BIZ_TYPE" ] ;
+            od:label "业务类型" ;
+            od:name "bizType" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "审批人员" ;
+            od:name "approverId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "DictionaryRef" ;
+            od:dictionaryRef [ od:dictionaryId "DICT-APPROVAL-NODE" ;
+                    od:typeCode "APPROVAL_NODE" ] ;
+            od:label "审批节点" ;
+            od:name "approvalNode" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "审批角色" ;
+            od:name "approvalRoleId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "DateTime" ;
+            od:label "审批时间" ;
+            od:name "approvalTime" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "业务单据编号" ;
+            od:name "bizNo" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "DictionaryRef" ;
+            od:dictionaryRef [ od:dictionaryId "DICT-APPROVAL-RESULT" ;
+                    od:typeCode "APPROVAL_RESULT" ] ;
+            od:label "审批结果" ;
+            od:name "approvalResult" ;
+            od:required true ;
+            od:unique false ] ;
+    od:id "AGG-APPROVAL-001" ;
+    od:lifecycle "已记录" ;
+    od:name "审批记录" ;
+    od:tags "支撑域" .
+
+<urn:od:contract-mgmt:M1:ASSOC-CONTRACT-CUSTOMER> a od:Association ;
+    od:associationType "REFERENCE" ;
+    od:cardinality "MANY_TO_ONE" ;
+    od:id "ASSOC-CONTRACT-CUSTOMER" ;
+    od:referenceField "customerId" ;
+    od:sourceAggregate <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+    od:sourceRole "所属客户" ;
+    od:targetAggregate <urn:od:contract-mgmt:M1:AGG-CUSTOMER-001> ;
+    od:targetRole "客户合同" .
+
+<urn:od:contract-mgmt:M1:ASSOC-CONTRACT-DEPARTMENT> a od:Association ;
+    od:associationType "REFERENCE" ;
+    od:cardinality "MANY_TO_ONE" ;
+    od:id "ASSOC-CONTRACT-DEPARTMENT" ;
+    od:referenceField "departmentId" ;
+    od:sourceAggregate <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+    od:sourceRole "归属部门" ;
+    od:targetAggregate <urn:od:contract-mgmt:M1:AGG-DEPARTMENT-001> ;
+    od:targetRole "部门合同" .
+
+<urn:od:contract-mgmt:M1:ASSOC-CONTRACT-EMPLOYEE> a od:Association ;
+    od:associationType "REFERENCE" ;
+    od:cardinality "MANY_TO_ONE" ;
+    od:id "ASSOC-CONTRACT-EMPLOYEE" ;
+    od:referenceField "ownerId" ;
+    od:sourceAggregate <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+    od:sourceRole "责任人" ;
+    od:targetAggregate <urn:od:contract-mgmt:M1:AGG-EMPLOYEE-001> ;
+    od:targetRole "负责合同" .
+
+<urn:od:contract-mgmt:M1:ASSOC-CONTRACT-INVOICE> a od:Association ;
+    od:associationType "REFERENCE" ;
+    od:cardinality "ONE_TO_MANY" ;
+    od:id "ASSOC-CONTRACT-INVOICE" ;
+    od:referenceField "contractId" ;
+    od:sourceAggregate <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+    od:sourceRole "产生开票" ;
+    od:targetAggregate <urn:od:contract-mgmt:M1:AGG-INVOICE-001> ;
+    od:targetRole "所属合同" .
+
+<urn:od:contract-mgmt:M1:ASSOC-CONTRACT-PRODUCT> a od:Association ;
+    od:associationType "REFERENCE" ;
+    od:cardinality "MANY_TO_ONE" ;
+    od:id "ASSOC-CONTRACT-PRODUCT" ;
+    od:referenceField "productId" ;
+    od:sourceAggregate <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+    od:sourceRole "所属产品" ;
+    od:targetAggregate <urn:od:contract-mgmt:M1:AGG-PRODUCT-001> ;
+    od:targetRole "产品合同" .
+
+<urn:od:contract-mgmt:M1:ASSOC-CONTRACT-RECEIPT> a od:Association ;
+    od:associationType "REFERENCE" ;
+    od:cardinality "ONE_TO_MANY" ;
+    od:id "ASSOC-CONTRACT-RECEIPT" ;
+    od:referenceField "contractId" ;
+    od:sourceAggregate <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+    od:sourceRole "对应收款" ;
+    od:targetAggregate <urn:od:contract-mgmt:M1:AGG-RECEIPT-001> ;
+    od:targetRole "所属合同" .
+
+<urn:od:contract-mgmt:M1:ASSOC-DEPARTMENT-EMPLOYEE> a od:Association ;
+    od:associationType "REFERENCE" ;
+    od:cardinality "MANY_TO_ONE" ;
+    od:id "ASSOC-DEPARTMENT-EMPLOYEE" ;
+    od:referenceField "departmentId" ;
+    od:sourceAggregate <urn:od:contract-mgmt:M1:AGG-EMPLOYEE-001> ;
+    od:sourceRole "所属部门" ;
+    od:targetAggregate <urn:od:contract-mgmt:M1:AGG-DEPARTMENT-001> ;
+    od:targetRole "部门人员" .
+
+<urn:od:contract-mgmt:M1:ASSOC-INVOICE-RECEIPT> a od:Association ;
+    od:associationType "REFERENCE" ;
+    od:cardinality "ONE_TO_MANY" ;
+    od:id "ASSOC-INVOICE-RECEIPT" ;
+    od:referenceField "invoiceId" ;
+    od:sourceAggregate <urn:od:contract-mgmt:M1:AGG-INVOICE-001> ;
+    od:sourceRole "对应收款" ;
+    od:targetAggregate <urn:od:contract-mgmt:M1:AGG-RECEIPT-001> ;
+    od:targetRole "所属开票" .
+
+<urn:od:contract-mgmt:M1:DICT-APPROVAL-NODE> a od:DataDictionary ;
+    od:hasType [ a od:DictionaryType ;
+            od:hasItem <urn:od:contract-mgmt:M1:APPROVAL_NODE:FINANCE_MANAGER>,
+                <urn:od:contract-mgmt:M1:APPROVAL_NODE:GENERAL_MANAGER> ;
+            od:typeCode "APPROVAL_NODE" ;
+            od:typeName "审批节点" ] ;
+    od:id "DICT-APPROVAL-NODE" ;
+    od:name "审批节点字典" .
+
+<urn:od:contract-mgmt:M1:DICT-APPROVAL-RESULT> a od:DataDictionary ;
+    od:hasType [ a od:DictionaryType ;
+            od:hasItem <urn:od:contract-mgmt:M1:APPROVAL_RESULT:APPROVE>,
+                <urn:od:contract-mgmt:M1:APPROVAL_RESULT:REJECT> ;
+            od:typeCode "APPROVAL_RESULT" ;
+            od:typeName "审批结果" ] ;
+    od:id "DICT-APPROVAL-RESULT" ;
+    od:name "审批结果字典" .
+
+<urn:od:contract-mgmt:M1:DICT-BIZ-TYPE> a od:DataDictionary ;
+    od:hasType [ a od:DictionaryType ;
+            od:hasItem <urn:od:contract-mgmt:M1:BIZ_TYPE:CONTRACT_REG>,
+                <urn:od:contract-mgmt:M1:BIZ_TYPE:INVOICE> ;
+            od:typeCode "BIZ_TYPE" ;
+            od:typeName "业务类型" ] ;
+    od:id "DICT-BIZ-TYPE" ;
+    od:name "审批业务类型字典" .
+
+<urn:od:contract-mgmt:M1:DICT-CONTRACT-TYPE> a od:DataDictionary ;
+    od:hasType [ a od:DictionaryType ;
+            od:hasItem <urn:od:contract-mgmt:M1:CONTRACT_TYPE:INTEGRATION>,
+                <urn:od:contract-mgmt:M1:CONTRACT_TYPE:PRODUCT>,
+                <urn:od:contract-mgmt:M1:CONTRACT_TYPE:SERVICE> ;
+            od:typeCode "CONTRACT_TYPE" ;
+            od:typeName "合同类型" ] ;
+    od:id "DICT-CONTRACT-TYPE" ;
+    od:name "合同类型字典" .
+
+<urn:od:contract-mgmt:M1:DICT-CUSTOMER-TYPE> a od:DataDictionary ;
+    od:hasType [ a od:DictionaryType ;
+            od:typeCode "CUSTOMER_TYPE" ;
+            od:typeName "客户类型" ] ;
+    od:id "DICT-CUSTOMER-TYPE" ;
+    od:name "客户类型字典" .
+
+<urn:od:contract-mgmt:M1:DICT-PRODUCT-TYPE> a od:DataDictionary ;
+    od:hasType [ a od:DictionaryType ;
+            od:typeCode "PRODUCT_TYPE" ;
+            od:typeName "产品类型" ] ;
+    od:id "DICT-PRODUCT-TYPE" ;
+    od:name "产品类型字典" .
+
+<urn:od:contract-mgmt:M1:DICT-RECEIPT-METHOD> a od:DataDictionary ;
+    od:hasType [ a od:DictionaryType ;
+            od:hasItem <urn:od:contract-mgmt:M1:RECEIPT_METHOD:BANK>,
+                <urn:od:contract-mgmt:M1:RECEIPT_METHOD:BILL>,
+                <urn:od:contract-mgmt:M1:RECEIPT_METHOD:OTHER> ;
+            od:typeCode "RECEIPT_METHOD" ;
+            od:typeName "收款方式" ] ;
+    od:id "DICT-RECEIPT-METHOD" ;
+    od:name "收款方式字典" .
+
+<urn:od:contract-mgmt:M2:Contract_ApproveFinance> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Contract_ApproveFinance" ;
+    od:name "财务经理审批合同" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-APPROVE-FINANCE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_ApproveFinance]" .
+
+<urn:od:contract-mgmt:M2:Contract_ApproveGeneralManager> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Contract_ApproveGeneralManager" ;
+    od:name "总经理审批合同" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-APPROVE-LARGE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_ApproveGeneralManager]" .
+
+<urn:od:contract-mgmt:M2:Contract_Resubmit> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Contract_Resubmit" ;
+    od:name "修改并重新提交合同" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-CREATE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_Resubmit]" .
+
+<urn:od:contract-mgmt:M2:Contract_SaveAsDraft> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Contract_SaveAsDraft" ;
+    od:name "保存合同草稿" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-CREATE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_SaveAsDraft]" .
+
+<urn:od:contract-mgmt:M2:Contract_Submit> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Contract_Submit" ;
+    od:name "提交合同审批" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-CREATE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_Submit]" .
+
+<urn:od:contract-mgmt:M2:Contract_UpdateSettlementStatus> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Contract_UpdateSettlementStatus" ;
+    od:name "更新合同结清状态" ;
+    od:objectRef "" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_UpdateSettlementStatus]" .
+
+<urn:od:contract-mgmt:M2:Contract_VoidOrArchive> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Contract_VoidOrArchive" ;
+    od:name "作废或归档合同" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-VOID" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_VoidOrArchive]" .
+
+<urn:od:contract-mgmt:M2:Customer_Maintain> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Customer_Maintain" ;
+    od:name "维护客户信息" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-MASTERDATA-MAINTAIN" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Customer_Maintain]" .
+
+<urn:od:contract-mgmt:M2:Department_Maintain> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Department_Maintain" ;
+    od:name "维护部门信息" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-MASTERDATA-MAINTAIN" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Department_Maintain]" .
+
+<urn:od:contract-mgmt:M2:Employee_Maintain> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Employee_Maintain" ;
+    od:name "维护人员信息" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-MASTERDATA-MAINTAIN" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Employee_Maintain]" .
+
+<urn:od:contract-mgmt:M2:Invoice_ApproveFinance> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Invoice_ApproveFinance" ;
+    od:name "财务经理审批开票" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-INVOICE-APPROVE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Invoice_ApproveFinance]" .
+
+<urn:od:contract-mgmt:M2:Invoice_Resubmit> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Invoice_Resubmit" ;
+    od:name "修改并重新提交开票" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-INVOICE-ISSUE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Invoice_Resubmit]" .
+
+<urn:od:contract-mgmt:M2:Invoice_SaveAsDraft> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Invoice_SaveAsDraft" ;
+    od:name "保存开票草稿" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-INVOICE-ISSUE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Invoice_SaveAsDraft]" .
+
+<urn:od:contract-mgmt:M2:Invoice_Submit> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Invoice_Submit" ;
+    od:name "提交开票审批" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-INVOICE-ISSUE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Invoice_Submit]" .
+
+<urn:od:contract-mgmt:M2:Invoice_UpdateReceiptStatus> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Invoice_UpdateReceiptStatus" ;
+    od:name "更新开票收款状态" ;
+    od:objectRef "" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Invoice_UpdateReceiptStatus]" .
+
+<urn:od:contract-mgmt:M2:Invoice_Void> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Invoice_Void" ;
+    od:name "作废开票" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-INVOICE-VOID" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Invoice_Void]" .
+
+<urn:od:contract-mgmt:M2:PaymentStage_UpdateInvoiceStatus> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "PaymentStage_UpdateInvoiceStatus" ;
+    od:name "更新付款阶段开票状态" ;
+    od:objectRef "" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[PaymentStage_UpdateInvoiceStatus]" .
+
+<urn:od:contract-mgmt:M2:Product_Maintain> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Product_Maintain" ;
+    od:name "维护产品信息" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-MASTERDATA-MAINTAIN" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Product_Maintain]" .
+
+<urn:od:contract-mgmt:M2:Receipt_Record> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Receipt_Record" ;
+    od:name "录入合同收款" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-RECEIPT-RECORD" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Receipt_Record]" .
+
+<urn:od:contract-mgmt:M2:Receipt_Reverse> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "COMMAND" ;
+    od:description "" ;
+    od:id "Receipt_Reverse" ;
+    od:name "冲销错误收款" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-RECEIPT-REVERSE" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Receipt_Reverse]" .
+
+<urn:od:contract-mgmt:M5:ACTOR-EMPLOYEE> a od:Actor ;
+    od:actorType "HUMAN" ;
+    od:hasRole <urn:od:contract-mgmt:M5:ROLE-EMPLOYEE> ;
+    od:id "ACTOR-EMPLOYEE" ;
+    od:name "普通员工" .
+
+<urn:od:contract-mgmt:M5:ACTOR-FINANCE> a od:Actor ;
+    od:actorType "HUMAN" ;
+    od:hasRole <urn:od:contract-mgmt:M5:ROLE-FINANCE> ;
+    od:id "ACTOR-FINANCE" ;
+    od:name "财务人员" .
+
+<urn:od:contract-mgmt:M5:ACTOR-FINANCE-MANAGER> a od:Actor ;
+    od:actorType "HUMAN" ;
+    od:hasRole <urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER> ;
+    od:id "ACTOR-FINANCE-MANAGER" ;
+    od:name "财务经理" .
+
+<urn:od:contract-mgmt:M5:ACTOR-GENERAL-MANAGER> a od:Actor ;
+    od:actorType "HUMAN" ;
+    od:hasRole <urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER> ;
+    od:id "ACTOR-GENERAL-MANAGER" ;
+    od:name "总经理" .
+
+<urn:od:contract-mgmt:M5:ACTOR-SALES> a od:Actor ;
+    od:actorType "HUMAN" ;
+    od:hasRole <urn:od:contract-mgmt:M5:ROLE-SALES> ;
+    od:id "ACTOR-SALES" ;
+    od:name "销售人员" .
+
+<urn:od:contract-mgmt:M5:ACTOR-SYSTEM> a od:Actor ;
+    od:actorType "SYSTEM" ;
+    od:hasRole <urn:od:contract-mgmt:M5:ROLE-SYSTEM> ;
+    od:id "ACTOR-SYSTEM" ;
+    od:name "系统自动执行主体" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001> a meta:Flow ;
+    meta:businessObjectRefs "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+        "urn:od:contract-mgmt:M1:AGG-INVOICE-001",
+        "urn:od:contract-mgmt:M1:AGG-RECEIPT-001" ;
+    meta:description "从合同创建、审批、生效、开票和收款到合同关闭的端到端协同流程" ;
+    meta:flowType "COLLABORATION" ;
+    meta:hasStep <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A01>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A02>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A03>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A05>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A06>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A07>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A08>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A09> ;
+    meta:id "FLOW-CONTRACT-001" ;
+    meta:name "合同全生命周期流程" ;
+    meta:postconditions "合同已归档或流程已明确终止" ;
+    meta:preconditions "销售合同已完成线下签字盖章，具备登记条件" ;
+    meta:roleRefs "urn:od:contract-mgmt:M5:ROLE-FINANCE",
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER",
+        "urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER",
+        "urn:od:contract-mgmt:M5:ROLE-SALES" ;
+    meta:startActivity "A01" ;
+    meta:trigger [ meta:triggerType "MANUAL" ] .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001> a meta:Flow ;
+    meta:businessObjectRefs "urn:od:contract-mgmt:M1:AGG-CONTRACT-001" ;
+    meta:description "合同先由财务经理审批，金额大于等于100万元时增加总经理审批" ;
+    meta:flowType "APPROVAL" ;
+    meta:hasStep <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P01>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P02>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P03>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P04>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P05>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P06>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P07>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P08> ;
+    meta:id "FLOW-CONTRACT-APPROVAL-001" ;
+    meta:name "合同登记审批" ;
+    meta:postconditions "合同审批通过、驳回或终止" ;
+    meta:preconditions "contract.status == '待财务经理审批'" ;
+    meta:roleRefs "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER",
+        "urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER" ;
+    meta:startActivity "P01" ;
+    meta:trigger [ meta:behaviorRef "Contract_Submit" ;
+            meta:triggerType "BEHAVIOR" ] .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002> a meta:Flow ;
+    meta:businessObjectRefs "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+        "urn:od:contract-mgmt:M1:AGG-INVOICE-001",
+        "urn:od:contract-mgmt:M1:AGG-RECEIPT-001" ;
+    meta:description "根据客户付款通知完成开票审批、付款阶段占用、收款登记和状态联动" ;
+    meta:flowType "COLLABORATION" ;
+    meta:hasStep <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B01>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B02>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B03>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B05>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B06>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B07>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B08>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B09> ;
+    meta:id "FLOW-CONTRACT-INVOICE-002" ;
+    meta:name "合同开票与收款流程" ;
+    meta:postconditions "本次有效开票已全部收齐，或开票审批终止/开票作废" ;
+    meta:preconditions "合同已纳入管理且客户已发出付款通知" ;
+    meta:roleRefs "urn:od:contract-mgmt:M5:ROLE-FINANCE",
+        "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER" ;
+    meta:startActivity "B01" ;
+    meta:trigger [ meta:triggerType "MANUAL" ] .
+
+<urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002> a meta:Flow ;
+    meta:businessObjectRefs "urn:od:contract-mgmt:M1:AGG-INVOICE-001" ;
+    meta:description "开票由财务经理单节点审批" ;
+    meta:flowType "APPROVAL" ;
+    meta:hasStep <urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q01>,
+        <urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q02>,
+        <urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q03>,
+        <urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q04>,
+        <urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q05> ;
+    meta:id "FLOW-INVOICE-APPROVAL-002" ;
+    meta:name "开票审批" ;
+    meta:postconditions "开票审批通过、驳回或终止" ;
+    meta:preconditions "invoice.approvalStatus == '待财务经理审批'" ;
+    meta:roleRefs "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER" ;
+    meta:startActivity "Q01" ;
+    meta:trigger [ meta:behaviorRef "Invoice_Submit" ;
+            meta:triggerType "BEHAVIOR" ] .
+
+<urn:od:contract-mgmt:M7:REP-CONTRACT-DETAIL> a od:Report ;
+    od:alias "contractDetail" ;
+    od:boundBehavior <urn:od:contract-mgmt:M2:Contract_QueryDetail> ;
+    od:description "查看单个合同的完整执行信息和可追溯历史" ;
+    od:id "REP-CONTRACT-DETAIL" ;
+    od:name "合同详情查询" ;
+    od:objectType "DETAIL_QUERY" ;
+    od:sourceObject [ a od:SourceObject ;
+            od:alias "contract" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+            od:primary true ] .
+
+<urn:od:contract-mgmt:M7:REP-CONTRACT-EXECUTION> a od:Report ;
+    od:alias "contractExecutionAnalysis" ;
+    od:boundBehavior <urn:od:contract-mgmt:M2:Contract_QueryExecutionAnalysis> ;
+    od:description "按合同汇总收款进度，识别合同执行与回款情况" ;
+    od:id "REP-CONTRACT-EXECUTION" ;
+    od:name "合同执行情况分析" ;
+    od:objectType "STATISTICAL_QUERY" ;
+    od:sourceObject [ a od:SourceObject ;
+            od:alias "receiptAgg" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-RECEIPT-001> ;
+            od:primary false ],
+        [ a od:SourceObject ;
+            od:alias "contract" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+            od:primary true ],
+        [ a od:SourceObject ;
+            od:alias "invoiceAgg" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-INVOICE-001> ;
+            od:primary false ] .
+
+<urn:od:contract-mgmt:M7:REP-CONTRACT-LIST> a od:Report ;
+    od:alias "contractList" ;
+    od:boundBehavior <urn:od:contract-mgmt:M2:Contract_QueryList> ;
+    od:description "按多种业务条件模糊查找合同并进入合同详情" ;
+    od:id "REP-CONTRACT-LIST" ;
+    od:name "合同综合查询" ;
+    od:objectType "LIST_QUERY" ;
+    od:sourceObject [ a od:SourceObject ;
+            od:alias "department" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-DEPARTMENT-001> ;
+            od:primary false ],
+        [ a od:SourceObject ;
+            od:alias "product" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-PRODUCT-001> ;
+            od:primary false ],
+        [ a od:SourceObject ;
+            od:alias "customer" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-CUSTOMER-001> ;
+            od:primary false ],
+        [ a od:SourceObject ;
+            od:alias "contract" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+            od:primary true ],
+        [ a od:SourceObject ;
+            od:alias "employee" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-EMPLOYEE-001> ;
+            od:primary false ] .
+
+<urn:od:contract-mgmt:M7:REP-DEPT-CONTRACT-SUMMARY> a od:Report ;
+    od:alias "departmentContractSummary" ;
+    od:boundBehavior <urn:od:contract-mgmt:M2:Contract_QueryDepartmentSummary> ;
+    od:description "按部门汇总合同规模、开票和回款执行情况" ;
+    od:id "REP-DEPT-CONTRACT-SUMMARY" ;
+    od:name "部门合同统计分析报表" ;
+    od:objectType "REPORT" ;
+    od:sourceObject [ a od:SourceObject ;
+            od:alias "receiptAgg" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-RECEIPT-001> ;
+            od:primary false ],
+        [ a od:SourceObject ;
+            od:alias "department" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-DEPARTMENT-001> ;
+            od:primary false ],
+        [ a od:SourceObject ;
+            od:alias "contract" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+            od:primary true ],
+        [ a od:SourceObject ;
+            od:alias "invoiceAgg" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-INVOICE-001> ;
+            od:primary false ] .
+
+<urn:od:contract-mgmt:M7:REP-INVOICED-UNRECEIVED> a od:Report ;
+    od:alias "invoicedUnreceivedContracts" ;
+    od:boundBehavior <urn:od:contract-mgmt:M2:Contract_QueryInvoicedUnreceived> ;
+    od:description "识别已批准开票但尚未全部收款的合同和开票记录（欠款清单）" ;
+    od:id "REP-INVOICED-UNRECEIVED" ;
+    od:name "已开票未收款合同分析" ;
+    od:objectType "STATISTICAL_QUERY" ;
+    od:sourceObject [ a od:SourceObject ;
+            od:alias "receiptAgg" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-RECEIPT-001> ;
+            od:primary false ],
+        [ a od:SourceObject ;
+            od:alias "invoice" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-INVOICE-001> ;
+            od:primary true ],
+        [ a od:SourceObject ;
+            od:alias "contract" ;
+            od:objectRef <urn:od:contract-mgmt:M1:AGG-CONTRACT-001> ;
+            od:primary false ] .
+
+<urn:od:contract-mgmt:M1:APPROVAL_NODE:FINANCE_MANAGER> a od:DictionaryItem ;
+    od:code "FINANCE_MANAGER" ;
+    od:enabled true ;
+    od:label "财务经理审批" ;
+    od:sortOrder 10 .
+
+<urn:od:contract-mgmt:M1:APPROVAL_NODE:GENERAL_MANAGER> a od:DictionaryItem ;
+    od:code "GENERAL_MANAGER" ;
+    od:enabled true ;
+    od:label "总经理审批" ;
+    od:sortOrder 20 .
+
+<urn:od:contract-mgmt:M1:APPROVAL_RESULT:APPROVE> a od:DictionaryItem ;
+    od:code "APPROVE" ;
+    od:enabled true ;
+    od:label "通过" ;
+    od:sortOrder 10 .
+
+<urn:od:contract-mgmt:M1:APPROVAL_RESULT:REJECT> a od:DictionaryItem ;
+    od:code "REJECT" ;
+    od:enabled true ;
+    od:label "驳回" ;
+    od:sortOrder 20 .
+
+<urn:od:contract-mgmt:M1:BIZ_TYPE:CONTRACT_REG> a od:DictionaryItem ;
+    od:code "CONTRACT_REG" ;
+    od:enabled true ;
+    od:label "合同登记" ;
+    od:sortOrder 10 .
+
+<urn:od:contract-mgmt:M1:BIZ_TYPE:INVOICE> a od:DictionaryItem ;
+    od:code "INVOICE" ;
+    od:enabled true ;
+    od:label "开票" ;
+    od:sortOrder 20 .
+
+<urn:od:contract-mgmt:M1:CONTRACT_TYPE:INTEGRATION> a od:DictionaryItem ;
+    od:code "INTEGRATION" ;
+    od:enabled true ;
+    od:label "集成合同" ;
+    od:sortOrder 30 .
+
+<urn:od:contract-mgmt:M1:CONTRACT_TYPE:PRODUCT> a od:DictionaryItem ;
+    od:code "PRODUCT" ;
+    od:enabled true ;
+    od:label "产品合同" ;
+    od:sortOrder 10 .
+
+<urn:od:contract-mgmt:M1:CONTRACT_TYPE:SERVICE> a od:DictionaryItem ;
+    od:code "SERVICE" ;
+    od:enabled true ;
+    od:label "服务合同" ;
+    od:sortOrder 20 .
+
+<urn:od:contract-mgmt:M1:RECEIPT_METHOD:BANK> a od:DictionaryItem ;
+    od:code "BANK" ;
+    od:enabled true ;
+    od:label "银行转账" ;
+    od:sortOrder 10 .
+
+<urn:od:contract-mgmt:M1:RECEIPT_METHOD:BILL> a od:DictionaryItem ;
+    od:code "BILL" ;
+    od:enabled true ;
+    od:label "票据" ;
+    od:sortOrder 20 .
+
+<urn:od:contract-mgmt:M1:RECEIPT_METHOD:OTHER> a od:DictionaryItem ;
+    od:code "OTHER" ;
+    od:enabled true ;
+    od:label "其他" ;
+    od:sortOrder 30 .
+
+<urn:od:contract-mgmt:M2:Contract_QueryDepartmentSummary> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "QUERY" ;
+    od:description "" ;
+    od:id "Contract_QueryDepartmentSummary" ;
+    od:name "查询部门合同统计分析" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-QUERY-DEPT-SUMMARY",
+        "PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryDepartmentSummary]" .
+
+<urn:od:contract-mgmt:M2:Contract_QueryDetail> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "QUERY" ;
+    od:description "" ;
+    od:id "Contract_QueryDetail" ;
+    od:name "查看合同详情" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-QUERY-DETAIL",
+        "PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryDetail]" .
+
+<urn:od:contract-mgmt:M2:Contract_QueryExecutionAnalysis> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "QUERY" ;
+    od:description "" ;
+    od:id "Contract_QueryExecutionAnalysis" ;
+    od:name "查询合同执行情况分析" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-QUERY-EXECUTION",
+        "PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryExecutionAnalysis]" .
+
+<urn:od:contract-mgmt:M2:Contract_QueryInvoicedUnreceived> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "QUERY" ;
+    od:description "" ;
+    od:id "Contract_QueryInvoicedUnreceived" ;
+    od:name "查询已开票未收款合同" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-QUERY-UNRECEIVED",
+        "PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryInvoicedUnreceived]" .
+
+<urn:od:contract-mgmt:M2:Contract_QueryList> a od:Behavior ;
+    od:alias "" ;
+    od:behaviorType "QUERY" ;
+    od:description "" ;
+    od:id "Contract_QueryList" ;
+    od:name "查询合同列表" ;
+    od:objectRef "" ;
+    od:requiredPermissions "PERM-CONTRACT-QUERY-LIST",
+        "PERM-CONTRACT-QUERY-LIST-OWN-DEPT" ;
+    od:yamlPointer "#yaml/m2-behavior-model.yaml#behaviors[Contract_QueryList]" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-FINANCE> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-APPROVE-FINANCE" ;
+    od:targetRef "Contract_ApproveFinance" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-LARGE> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-APPROVE-LARGE" ;
+    od:targetRef "Contract_ApproveGeneralManager" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT> a od:Permission ;
+    od:dataScope "DEPT" ;
+    od:id "PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT" ;
+    od:targetRef "Contract_QueryDepartmentSummary" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT> a od:Permission ;
+    od:dataScope "DEPT" ;
+    od:id "PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT" ;
+    od:targetRef "Contract_QueryDetail" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT> a od:Permission ;
+    od:dataScope "DEPT" ;
+    od:id "PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT" ;
+    od:targetRef "Contract_QueryExecutionAnalysis" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST-OWN-DEPT> a od:Permission ;
+    od:dataScope "DEPT" ;
+    od:id "PERM-CONTRACT-QUERY-LIST-OWN-DEPT" ;
+    od:targetRef "Contract_QueryList" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT> a od:Permission ;
+    od:dataScope "DEPT" ;
+    od:id "PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT" ;
+    od:targetRef "Contract_QueryInvoicedUnreceived" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-VOID> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-VOID" ;
+    od:targetRef "Contract_VoidOrArchive" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CUSTOMER-MAINTAIN> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CUSTOMER-MAINTAIN" ;
+    od:targetRef "Customer_Maintain" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-DEPARTMENT-MAINTAIN> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-DEPARTMENT-MAINTAIN" ;
+    od:targetRef "Department_Maintain" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-EMPLOYEE-MAINTAIN> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-EMPLOYEE-MAINTAIN" ;
+    od:targetRef "Employee_Maintain" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-INVOICE-APPROVE> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-INVOICE-APPROVE" ;
+    od:targetRef "Invoice_ApproveFinance" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-INVOICE-RESUBMIT> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-INVOICE-RESUBMIT" ;
+    od:targetRef "Invoice_Resubmit" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-INVOICE-SAVE-DRAFT> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-INVOICE-SAVE-DRAFT" ;
+    od:targetRef "Invoice_SaveAsDraft" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-INVOICE-SUBMIT> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-INVOICE-SUBMIT" ;
+    od:targetRef "Invoice_Submit" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-INVOICE-VOID> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-INVOICE-VOID" ;
+    od:targetRef "Invoice_Void" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-PRODUCT-MAINTAIN> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-PRODUCT-MAINTAIN" ;
+    od:targetRef "Product_Maintain" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-RECEIPT-RECORD> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-RECEIPT-RECORD" ;
+    od:targetRef "Receipt_Record" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-RECEIPT-REVERSE> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-RECEIPT-REVERSE" ;
+    od:targetRef "Receipt_Reverse" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:ROLE-EMPLOYEE> a od:Role ;
+    od:hasPermission <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY-OWN-DEPT>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL-OWN-DEPT>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION-OWN-DEPT>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST-OWN-DEPT>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED-OWN-DEPT> ;
+    od:id "ROLE-EMPLOYEE" ;
+    od:name "普通员工" .
+
+<urn:od:contract-mgmt:M5:ROLE-FINANCE> a od:Role ;
+    od:hasPermission <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-RESUBMIT>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-SAVE-DRAFT>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-SUBMIT>,
+        <urn:od:contract-mgmt:M5:PERM-INVOICE-RESUBMIT>,
+        <urn:od:contract-mgmt:M5:PERM-INVOICE-SAVE-DRAFT>,
+        <urn:od:contract-mgmt:M5:PERM-INVOICE-SUBMIT>,
+        <urn:od:contract-mgmt:M5:PERM-INVOICE-VOID>,
+        <urn:od:contract-mgmt:M5:PERM-RECEIPT-RECORD>,
+        <urn:od:contract-mgmt:M5:PERM-RECEIPT-REVERSE> ;
+    od:id "ROLE-FINANCE" ;
+    od:name "财务人员" .
+
+<urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER> a od:Role ;
+    od:hasPermission <urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-FINANCE>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-VOID>,
+        <urn:od:contract-mgmt:M5:PERM-CUSTOMER-MAINTAIN>,
+        <urn:od:contract-mgmt:M5:PERM-DEPARTMENT-MAINTAIN>,
+        <urn:od:contract-mgmt:M5:PERM-EMPLOYEE-MAINTAIN>,
+        <urn:od:contract-mgmt:M5:PERM-INVOICE-APPROVE>,
+        <urn:od:contract-mgmt:M5:PERM-PRODUCT-MAINTAIN> ;
+    od:id "ROLE-FINANCE-MANAGER" ;
+    od:name "财务经理" .
+
+<urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER> a od:Role ;
+    od:hasPermission <urn:od:contract-mgmt:M5:PERM-CONTRACT-APPROVE-LARGE>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED> ;
+    od:id "ROLE-GENERAL-MANAGER" ;
+    od:name "总经理" .
+
+<urn:od:contract-mgmt:M5:ROLE-SALES> a od:Role ;
+    od:hasPermission <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-RESUBMIT>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-SAVE-DRAFT>,
+        <urn:od:contract-mgmt:M5:PERM-CONTRACT-SUBMIT> ;
+    od:id "ROLE-SALES" ;
+    od:name "销售人员" .
+
+<urn:od:contract-mgmt:M5:ROLE-SYSTEM> a od:Role ;
+    od:id "ROLE-SYSTEM" ;
+    od:name "系统自动执行主体" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A01> a meta:Step ;
+    meta:id "A01" ;
+    meta:kind "start" ;
+    meta:label "开始" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A02> a meta:Step ;
+    meta:dependsOn "A01" ;
+    meta:id "A02" ;
+    meta:kind "user_input" ;
+    meta:label "创建合同（保存草稿/提交审批）" ;
+    meta:permissionRef "urn:od:contract-mgmt:M5:ROLE-SALES" ;
+    meta:skill "urn:od:contract-mgmt:M2:Contract_Submit" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A03> a meta:Step ;
+    meta:dependsOn "A02" ;
+    meta:id "A03" ;
+    meta:kind "skill_exec" ;
+    meta:label "合同登记审批" ;
+    meta:skill "urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04> a meta:Step ;
+    meta:dependsOn "A03" ;
+    meta:id "A04" ;
+    meta:kind "llm_classify" ;
+    meta:label "审批结果判断" ;
+    meta:routes <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-0>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-1>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-2> .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-0> a meta:Route ;
+    meta:branchName "审批通过" ;
+    meta:choice "APPROVE" ;
+    meta:conditionExpression "approval.outcome == 'APPROVE'" ;
+    meta:isDefault true ;
+    meta:target "A05" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-1> a meta:Route ;
+    meta:branchName "驳回后修改重提" ;
+    meta:choice "REJECT" ;
+    meta:conditionExpression "approval.outcome == 'REJECT'" ;
+    meta:isDefault false ;
+    meta:target "A02" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A04-route-2> a meta:Route ;
+    meta:branchName "终止且不再提交" ;
+    meta:choice "TERMINATE" ;
+    meta:conditionExpression "approval.outcome == 'TERMINATE'" ;
+    meta:isDefault false ;
+    meta:target "A09" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A05> a meta:Step ;
+    meta:id "A05" ;
+    meta:kind "skill_exec" ;
+    meta:label "开票与收款循环" ;
+    meta:skill "urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A06> a meta:Step ;
+    meta:dependsOn "A05" ;
+    meta:id "A06" ;
+    meta:kind "llm_classify" ;
+    meta:label "合同结清判断" ;
+    meta:routes <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A06-route-0>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A06-route-1> .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A06-route-0> a meta:Route ;
+    meta:branchName "满足结清条件" ;
+    meta:choice "RULE-CONTRACT-SETTLEMENT" ;
+    meta:isDefault false ;
+    meta:ruleRef "urn:od:contract-mgmt:M3:RULE-CONTRACT-SETTLEMENT" ;
+    meta:target "A07" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A06-route-1> a meta:Route ;
+    meta:branchName "未结清，继续开票收款" ;
+    meta:choice "未结清，继续开票收款" ;
+    meta:isDefault true ;
+    meta:target "A05" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A07> a meta:Step ;
+    meta:id "A07" ;
+    meta:kind "agent" ;
+    meta:label "合同结清（由同步联动自动触发）" ;
+    meta:skill "urn:od:contract-mgmt:M2:Contract_UpdateSettlementStatus" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A08> a meta:Step ;
+    meta:dependsOn "A07" ;
+    meta:id "A08" ;
+    meta:kind "user_input" ;
+    meta:label "合同作废或归档" ;
+    meta:permissionRef "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER" ;
+    meta:skill "urn:od:contract-mgmt:M2:Contract_VoidOrArchive" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-001:A09> a meta:Step ;
+    meta:dependsOn "A08" ;
+    meta:id "A09" ;
+    meta:kind "end" ;
+    meta:label "结束" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P01> a meta:Step ;
+    meta:id "P01" ;
+    meta:kind "start" ;
+    meta:label "开始" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P02> a meta:Step ;
+    meta:dependsOn "P01" ;
+    meta:enum "APPROVE",
+        "REJECT" ;
+    meta:id "P02" ;
+    meta:kind "user_input" ;
+    meta:label "财务经理审批" ;
+    meta:permissionRef "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER" ;
+    meta:skill "urn:od:contract-mgmt:M2:Contract_ApproveFinance" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P03> a meta:Step ;
+    meta:dependsOn "P02" ;
+    meta:id "P03" ;
+    meta:kind "llm_classify" ;
+    meta:label "财务审批结果判断" ;
+    meta:routes <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P03-route-0>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P03-route-1> .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P03-route-0> a meta:Route ;
+    meta:branchName "驳回" ;
+    meta:choice "REJECT" ;
+    meta:conditionExpression "approval.outcome == 'REJECT'" ;
+    meta:isDefault false ;
+    meta:target "P08" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P03-route-1> a meta:Route ;
+    meta:branchName "通过" ;
+    meta:choice "APPROVE" ;
+    meta:conditionExpression "approval.outcome == 'APPROVE'" ;
+    meta:isDefault true ;
+    meta:target "P04" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P04> a meta:Step ;
+    meta:id "P04" ;
+    meta:kind "llm_classify" ;
+    meta:label "大额合同判断" ;
+    meta:routes <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P04-route-0>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P04-route-1> .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P04-route-0> a meta:Route ;
+    meta:branchName "金额大于等于100万元" ;
+    meta:choice "RULE-CONTRACT-APPROVAL-LEVEL" ;
+    meta:isDefault false ;
+    meta:ruleRef "urn:od:contract-mgmt:M3:RULE-CONTRACT-APPROVAL-LEVEL" ;
+    meta:target "P05" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P04-route-1> a meta:Route ;
+    meta:branchName "普通金额合同" ;
+    meta:choice "普通金额合同" ;
+    meta:isDefault true ;
+    meta:target "P06" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P05> a meta:Step ;
+    meta:enum "APPROVE",
+        "REJECT" ;
+    meta:id "P05" ;
+    meta:kind "user_input" ;
+    meta:label "总经理审批" ;
+    meta:permissionRef "urn:od:contract-mgmt:M5:ROLE-GENERAL-MANAGER" ;
+    meta:skill "urn:od:contract-mgmt:M2:Contract_ApproveGeneralManager" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P06> a meta:Step ;
+    meta:dependsOn "P05" ;
+    meta:id "P06" ;
+    meta:kind "agent" ;
+    meta:label "标记审批通过（合同已纳入管理）" ;
+    meta:skill "urn:od:contract-mgmt:M2:Contract_ApproveGeneralManager" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P07> a meta:Step ;
+    meta:dependsOn "P06" ;
+    meta:id "P07" ;
+    meta:kind "end" ;
+    meta:label "审批通过结束" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-APPROVAL-001:P08> a meta:Step ;
+    meta:id "P08" ;
+    meta:kind "end" ;
+    meta:label "驳回结束" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B01> a meta:Step ;
+    meta:id "B01" ;
+    meta:kind "start" ;
+    meta:label "开始" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B02> a meta:Step ;
+    meta:dependsOn "B01" ;
+    meta:id "B02" ;
+    meta:kind "user_input" ;
+    meta:label "开票登记（保存草稿/提交审批）" ;
+    meta:permissionRef "urn:od:contract-mgmt:M5:ROLE-FINANCE" ;
+    meta:skill "urn:od:contract-mgmt:M2:Invoice_Submit" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B03> a meta:Step ;
+    meta:dependsOn "B02" ;
+    meta:id "B03" ;
+    meta:kind "skill_exec" ;
+    meta:label "开票审批" ;
+    meta:skill "urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04> a meta:Step ;
+    meta:dependsOn "B03" ;
+    meta:id "B04" ;
+    meta:kind "llm_classify" ;
+    meta:label "审批结果判断" ;
+    meta:routes <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04-route-0>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04-route-1>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04-route-2> .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04-route-0> a meta:Route ;
+    meta:branchName "审批通过" ;
+    meta:choice "APPROVE" ;
+    meta:conditionExpression "approval.outcome == 'APPROVE'" ;
+    meta:isDefault true ;
+    meta:target "B05" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04-route-1> a meta:Route ;
+    meta:branchName "驳回后修改重提" ;
+    meta:choice "REJECT" ;
+    meta:conditionExpression "approval.outcome == 'REJECT'" ;
+    meta:isDefault false ;
+    meta:target "B02" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B04-route-2> a meta:Route ;
+    meta:branchName "终止且不再提交" ;
+    meta:choice "TERMINATE" ;
+    meta:conditionExpression "approval.outcome == 'TERMINATE'" ;
+    meta:isDefault false ;
+    meta:target "B09" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B05> a meta:Step ;
+    meta:id "B05" ;
+    meta:kind "agent" ;
+    meta:label "更新付款阶段开票状态（同步联动自动触发）" ;
+    meta:skill "urn:od:contract-mgmt:M2:PaymentStage_UpdateInvoiceStatus" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B06> a meta:Step ;
+    meta:dependsOn "B05" ;
+    meta:id "B06" ;
+    meta:kind "user_input" ;
+    meta:label "录入收款" ;
+    meta:permissionRef "urn:od:contract-mgmt:M5:ROLE-FINANCE" ;
+    meta:skill "urn:od:contract-mgmt:M2:Receipt_Record" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B07> a meta:Step ;
+    meta:dependsOn "B06" ;
+    meta:id "B07" ;
+    meta:kind "agent" ;
+    meta:label "更新开票收款状态（同步联动自动触发）" ;
+    meta:skill "urn:od:contract-mgmt:M2:Invoice_UpdateReceiptStatus" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B08> a meta:Step ;
+    meta:dependsOn "B07" ;
+    meta:id "B08" ;
+    meta:kind "llm_classify" ;
+    meta:label "开票是否全部收齐" ;
+    meta:routes <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B08-route-0>,
+        <urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B08-route-1> .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B08-route-0> a meta:Route ;
+    meta:branchName "已全部收齐" ;
+    meta:choice "RULE-INVOICE-RECEIPT-STATUS" ;
+    meta:isDefault false ;
+    meta:ruleRef "urn:od:contract-mgmt:M3:RULE-INVOICE-RECEIPT-STATUS" ;
+    meta:target "B09" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B08-route-1> a meta:Route ;
+    meta:branchName "未收齐，继续收款" ;
+    meta:choice "未收齐，继续收款" ;
+    meta:isDefault true ;
+    meta:target "B06" .
+
+<urn:od:contract-mgmt:M6:FLOW-CONTRACT-INVOICE-002:B09> a meta:Step ;
+    meta:id "B09" ;
+    meta:kind "end" ;
+    meta:label "结束" .
+
+<urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q01> a meta:Step ;
+    meta:id "Q01" ;
+    meta:kind "start" ;
+    meta:label "开始" .
+
+<urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q02> a meta:Step ;
+    meta:dependsOn "Q01" ;
+    meta:enum "APPROVE",
+        "REJECT" ;
+    meta:id "Q02" ;
+    meta:kind "user_input" ;
+    meta:label "财务经理审批" ;
+    meta:permissionRef "urn:od:contract-mgmt:M5:ROLE-FINANCE-MANAGER" ;
+    meta:skill "urn:od:contract-mgmt:M2:Invoice_ApproveFinance" .
+
+<urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q03> a meta:Step ;
+    meta:dependsOn "Q02" ;
+    meta:id "Q03" ;
+    meta:kind "llm_classify" ;
+    meta:label "审批结果判断" ;
+    meta:routes <urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q03-route-0>,
+        <urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q03-route-1> .
+
+<urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q03-route-0> a meta:Route ;
+    meta:branchName "通过" ;
+    meta:choice "APPROVE" ;
+    meta:conditionExpression "approval.outcome == 'APPROVE'" ;
+    meta:isDefault true ;
+    meta:target "Q04" .
+
+<urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q03-route-1> a meta:Route ;
+    meta:branchName "驳回" ;
+    meta:choice "REJECT" ;
+    meta:conditionExpression "approval.outcome == 'REJECT'" ;
+    meta:isDefault false ;
+    meta:target "Q05" .
+
+<urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q04> a meta:Step ;
+    meta:id "Q04" ;
+    meta:kind "end" ;
+    meta:label "审批通过结束（开票已批准）" .
+
+<urn:od:contract-mgmt:M6:FLOW-INVOICE-APPROVAL-002:Q05> a meta:Step ;
+    meta:id "Q05" ;
+    meta:kind "end" ;
+    meta:label "驳回结束" .
+
+<urn:od:contract-mgmt:M1:AGG-CUSTOMER-001> a od:AggregateRoot ;
+    od:alias "Customer" ;
+    od:description "客户主数据，本系统维护，被合同引用" ;
+    od:hasAttribute [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "客户名称" ;
+            od:name "customerName" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "客户编号" ;
+            od:name "customerId" ;
+            od:required true ;
+            od:unique true ],
+        [ a od:Attribute ;
+            od:dataType "DictionaryRef" ;
+            od:dictionaryRef [ od:dictionaryId "DICT-CUSTOMER-TYPE" ;
+                    od:typeCode "CUSTOMER_TYPE" ] ;
+            od:label "客户类型" ;
+            od:name "customerType" ;
+            od:required true ;
+            od:unique false ] ;
+    od:id "AGG-CUSTOMER-001" ;
+    od:lifecycle "停用",
+        "在用" ;
+    od:name "客户" ;
+    od:tags "主数据" .
+
+<urn:od:contract-mgmt:M1:AGG-PRODUCT-001> a od:AggregateRoot ;
+    od:alias "Product" ;
+    od:description "产品主数据，本系统维护，被合同引用" ;
+    od:hasAttribute [ a od:Attribute ;
+            od:dataType "DictionaryRef" ;
+            od:dictionaryRef [ od:dictionaryId "DICT-PRODUCT-TYPE" ;
+                    od:typeCode "PRODUCT_TYPE" ] ;
+            od:label "产品类型" ;
+            od:name "productType" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "产品名称" ;
+            od:name "productName" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "产品编号" ;
+            od:name "productId" ;
+            od:required true ;
+            od:unique true ] ;
+    od:id "AGG-PRODUCT-001" ;
+    od:lifecycle "停用",
+        "在用" ;
+    od:name "产品" ;
+    od:tags "主数据" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-RESUBMIT> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-RESUBMIT" ;
+    od:targetRef "Contract_Resubmit" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-SAVE-DRAFT> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-SAVE-DRAFT" ;
+    od:targetRef "Contract_SaveAsDraft" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-SUBMIT> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-SUBMIT" ;
+    od:targetRef "Contract_Submit" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M1:AGG-EMPLOYEE-001> a od:AggregateRoot ;
+    od:alias "Employee" ;
+    od:description "人员主数据，本系统维护，被合同责任人引用" ;
+    od:hasAttribute [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "人员编号" ;
+            od:name "employeeId" ;
+            od:required true ;
+            od:unique true ],
+        [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "所属部门" ;
+            od:name "departmentId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "人员名称" ;
+            od:name "employeeName" ;
+            od:required true ;
+            od:unique false ] ;
+    od:id "AGG-EMPLOYEE-001" ;
+    od:lifecycle "停用",
+        "在用" ;
+    od:name "人员" ;
+    od:tags "主数据" .
+
+<urn:od:contract-mgmt:M1:AGG-DEPARTMENT-001> a od:AggregateRoot ;
+    od:alias "Department" ;
+    od:description "组织主数据，本系统维护，被人员和合同引用" ;
+    od:hasAttribute [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "部门编号" ;
+            od:name "departmentId" ;
+            od:required true ;
+            od:unique true ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "部门名称" ;
+            od:name "departmentName" ;
+            od:required true ;
+            od:unique false ] ;
+    od:id "AGG-DEPARTMENT-001" ;
+    od:lifecycle "停用",
+        "在用" ;
+    od:name "部门" ;
+    od:tags "主数据" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DEPT-SUMMARY> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-QUERY-DEPT-SUMMARY" ;
+    od:targetRef "Contract_QueryDepartmentSummary" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-DETAIL> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-QUERY-DETAIL" ;
+    od:targetRef "Contract_QueryDetail" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-EXECUTION> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-QUERY-EXECUTION" ;
+    od:targetRef "Contract_QueryExecutionAnalysis" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-LIST> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-QUERY-LIST" ;
+    od:targetRef "Contract_QueryList" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M5:PERM-CONTRACT-QUERY-UNRECEIVED> a od:Permission ;
+    od:dataScope "ALL" ;
+    od:id "PERM-CONTRACT-QUERY-UNRECEIVED" ;
+    od:targetRef "Contract_QueryInvoicedUnreceived" ;
+    od:targetType "BEHAVIOR" .
+
+<urn:od:contract-mgmt:M1:AGG-INVOICE-001> a od:AggregateRoot ;
+    od:alias "Invoice" ;
+    od:description "针对一个合同登记的开票业务记录，通过分摊关系覆盖一个或多个付款阶段" ;
+    od:hasAttribute [ a od:Attribute ;
+            od:dataType "DateTime" ;
+            od:label "收款完成时间" ;
+            od:name "receivedDate" ;
+            od:required false ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Boolean" ;
+            od:label "是否收款" ;
+            od:name "receivedFlag" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Date" ;
+            od:label "开票时间" ;
+            od:name "invoiceDate" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "对应合同" ;
+            od:name "contractId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Enum" ;
+            od:label "开票审批状态" ;
+            od:name "approvalStatus" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "开票编号" ;
+            od:name "invoiceNo" ;
+            od:required true ;
+            od:unique true ],
+        [ a od:Attribute ;
+            od:dataType "Money" ;
+            od:label "已收款金额" ;
+            od:name "receivedAmount" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Decimal" ;
+            od:label "开票税率" ;
+            od:name "invoiceTaxRate" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Money" ;
+            od:label "开票金额（含税）" ;
+            od:name "invoiceAmount" ;
+            od:required true ;
+            od:unique false ] ;
+    od:hasEntity [ a od:Entity ;
+            od:alias "InvoiceStageAllocation" ;
+            od:cardinality "ONE_OR_MORE" ;
+            od:hasAttribute [ a od:Attribute ;
+                    od:dataType "String" ;
+                    od:label "对应付款阶段" ;
+                    od:name "stageId" ;
+                    od:required true ;
+                    od:unique false ],
+                [ a od:Attribute ;
+                    od:dataType "AggregateRootRef" ;
+                    od:label "对应合同" ;
+                    od:name "contractId" ;
+                    od:required true ;
+                    od:unique false ],
+                [ a od:Attribute ;
+                    od:dataType "Money" ;
+                    od:label "分摊金额" ;
+                    od:name "allocatedAmount" ;
+                    od:required true ;
+                    od:unique false ],
+                [ a od:Attribute ;
+                    od:dataType "String" ;
+                    od:label "分摊标识" ;
+                    od:name "allocationId" ;
+                    od:required true ;
+                    od:unique false ] ;
+            od:localId "allocationId" ;
+            od:name "开票付款阶段分摊" ] ;
+    od:hasInvariant [ a od:Invariant ;
+            od:enforcedAt "ALWAYS" ;
+            od:expression "receivedAmount >= 0 AND receivedAmount <= invoiceAmount" ;
+            od:name "已收款金额范围" ;
+            od:violationMessage "已收款金额应在 0 到开票金额之间" ],
+        [ a od:Invariant ;
+            od:enforcedAt "ALWAYS" ;
+            od:expression "SUM(allocations.allocatedAmount) == invoiceAmount" ;
+            od:name "开票分摊金额平衡" ;
+            od:violationMessage "同一开票的分摊金额合计必须等于开票金额" ],
+        [ a od:Invariant ;
+            od:enforcedAt "ALWAYS" ;
+            od:expression "IF receivedFlag == true THEN receivedAmount == invoiceAmount AND receivedDate != null" ;
+            od:name "收款完成信息一致" ;
+            od:violationMessage "是否收款为是时，已收款金额须等于开票金额且完成时间非空" ] ;
+    od:id "AGG-INVOICE-001" ;
+    od:lifecycle "已作废",
+        "已批准",
+        "已驳回",
+        "待财务经理审批",
+        "草稿" ;
+    od:name "开票" ;
+    od:tags "核心域" .
+
+<urn:od:contract-mgmt:M1:AGG-RECEIPT-001> a od:AggregateRoot ;
+    od:alias "Receipt" ;
+    od:description "独立记录客户针对具体合同和开票的每笔收款" ;
+    od:hasAttribute [ a od:Attribute ;
+            od:dataType "DateTime" ;
+            od:label "收款时间" ;
+            od:name "receiptTime" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "备注" ;
+            od:name "remark" ;
+            od:required false ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "DictionaryRef" ;
+            od:dictionaryRef [ od:dictionaryId "DICT-RECEIPT-METHOD" ;
+                    od:typeCode "RECEIPT_METHOD" ] ;
+            od:label "收款方式" ;
+            od:name "receiptMethod" ;
+            od:required false ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "对应合同" ;
+            od:name "contractId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "对应开票" ;
+            od:name "invoiceId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Money" ;
+            od:label "收款金额" ;
+            od:name "receiptAmount" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "收款编号" ;
+            od:name "receiptNo" ;
+            od:required true ;
+            od:unique true ],
+        [ a od:Attribute ;
+            od:dataType "Enum" ;
+            od:label "收款状态" ;
+            od:name "status" ;
+            od:required true ;
+            od:unique false ] ;
+    od:id "AGG-RECEIPT-001" ;
+    od:lifecycle "已冲销",
+        "已登记" ;
+    od:name "收款" ;
+    od:tags "核心域" .
+
+<urn:od:contract-mgmt:M1:AGG-CONTRACT-001> a od:AggregateRoot ;
+    od:alias "Contract" ;
+    od:description "对外销售产生的合同签订信息，包含合同基本信息和付款条款明细" ;
+    od:hasAttribute [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "责任人" ;
+            od:name "ownerId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "登记人" ;
+            od:name "registrantId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "合同名称" ;
+            od:name "contractName" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "DictionaryRef" ;
+            od:dictionaryRef [ od:dictionaryId "DICT-CONTRACT-TYPE" ;
+                    od:typeCode "CONTRACT_TYPE" ] ;
+            od:label "合同类型" ;
+            od:name "contractType" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Date" ;
+            od:label "合同签订时间" ;
+            od:name "signDate" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "所属客户" ;
+            od:name "customerId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "所属部门" ;
+            od:name "departmentId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Money" ;
+            od:label "合同总金额（含税）" ;
+            od:name "totalAmount" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "String" ;
+            od:label "合同编号" ;
+            od:name "contractNo" ;
+            od:required true ;
+            od:unique true ],
+        [ a od:Attribute ;
+            od:dataType "Decimal" ;
+            od:label "合同税率" ;
+            od:name "taxRate" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "DateTime" ;
+            od:label "登记时间" ;
+            od:name "registeredAt" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "AggregateRootRef" ;
+            od:label "所属产品" ;
+            od:name "productId" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Money" ;
+            od:label "对外采购金额（含税）" ;
+            od:name "purchaseAmount" ;
+            od:required true ;
+            od:unique false ],
+        [ a od:Attribute ;
+            od:dataType "Enum" ;
+            od:label "登记管理状态" ;
+            od:name "status" ;
+            od:required true ;
+            od:unique false ] ;
+    od:hasEntity [ a od:Entity ;
+            od:alias "PaymentStage" ;
+            od:cardinality "ONE_OR_MORE" ;
+            od:hasAttribute [ a od:Attribute ;
+                    od:dataType "String" ;
+                    od:label "付款阶段名称" ;
+                    od:name "stageName" ;
+                    od:required true ;
+                    od:unique false ],
+                [ a od:Attribute ;
+                    od:dataType "String" ;
+                    od:label "付款阶段编号" ;
+                    od:name "stageId" ;
+                    od:required true ;
+                    od:unique false ],
+                [ a od:Attribute ;
+                    od:dataType "Enum" ;
+                    od:label "阶段开票状态" ;
+                    od:name "invoiceStatus" ;
+                    od:required true ;
+                    od:unique false ],
+                [ a od:Attribute ;
+                    od:dataType "Money" ;
+                    od:label "阶段应付金额" ;
+                    od:name "stageAmount" ;
+                    od:required true ;
+                    od:unique false ],
+                [ a od:Attribute ;
+                    od:dataType "Decimal" ;
+                    od:label "付款比例（百分比）" ;
+                    od:name "payRatio" ;
+                    od:required true ;
+                    od:unique false ] ;
+            od:localId "stageId" ;
+            od:name "付款阶段" ] ;
+    od:hasInvariant [ a od:Invariant ;
+            od:enforcedAt "ON_CREATE" ;
+            od:expression "SUM(stages.payRatio) == 100" ;
+            od:name "付款比例合计等于100" ;
+            od:violationMessage "付款阶段付款比例合计必须等于 100" ],
+        [ a od:Invariant ;
+            od:enforcedAt "ALWAYS" ;
+            od:expression "purchaseAmount <= totalAmount" ;
+            od:name "采购金额不超过合同金额" ;
+            od:violationMessage "对外采购金额不得大于合同总金额" ] ;
+    od:id "AGG-CONTRACT-001" ;
+    od:lifecycle "已作废",
+        "已归档",
+        "已纳入管理",
+        "已结清",
+        "已驳回",
+        "待总经理审批",
+        "待财务经理审批",
+        "草稿" ;
+    od:name "合同" ;
+    od:tags "核心域" .
+

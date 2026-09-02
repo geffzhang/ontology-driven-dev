@@ -1,0 +1,37 @@
+{
+  "@context": {
+    "@vocab": "https://ontology.ontology-driven.dev/v9#",
+    "od": "https://ontology.ontology-driven.dev/v9#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "od:totalAmount": {"@type": "xsd:decimal"},
+    "od:validReceiptCount": {"@type": "xsd:integer"}
+  },
+  "@graph": [
+    {
+      "@id": "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+      "@type": "od:Contract",
+      "od:id": "AGG-CONTRACT-001",
+      "od:totalAmount": "999999",
+      "od:contractStatus": "已纳入管理"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M1:AGG-CONTRACT-002",
+      "@type": "od:Contract",
+      "od:id": "AGG-CONTRACT-002",
+      "od:totalAmount": "999999",
+      "od:contractStatus": "草稿"
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M1:AGG-RECEIPT-001",
+      "@type": "od:Receipt",
+      "od:id": "AGG-RECEIPT-001",
+      "od:validReceiptCount": 5
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M1:AGG-RECEIPT-002",
+      "@type": "od:Receipt",
+      "od:id": "AGG-RECEIPT-002",
+      "od:validReceiptCount": 0
+    }
+  ]
+}

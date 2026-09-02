@@ -1,0 +1,66 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix meta: <https://openclaw.dev/meta/v1#> .
+@prefix od: <https://ontology.ontology-driven.dev/v9#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ─────────────────────────────────────────────────────────────
+# meta:FlowShape
+# 来源：spec § 4.4 + MetaSkill 12 步上限约束
+# ─────────────────────────────────────────────────────────────
+meta:FlowShape
+    a sh:NodeShape ;
+    sh:targetClass meta:Flow ;
+    sh:property [
+        sh:path meta:hasStep ;
+        sh:maxCount 12 ;  # MetaSkill 12 步硬上限
+        sh:description "MetaSkill 12 步上限约束（spec § 4.4）" ;
+    ] ;
+    sh:property [
+        sh:path meta:id ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "Flow 必有 id" ;
+    ] ;
+    sh:property [
+        sh:path meta:startActivity ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "Flow 必指定 start activity" ;
+    ] .
+
+# ─────────────────────────────────────────────────────────────
+# meta:StepShape
+# ─────────────────────────────────────────────────────────────
+meta:StepShape
+    a sh:NodeShape ;
+    sh:targetClass meta:Step ;
+    sh:property [
+        sh:path meta:kind ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:in ( "start" "end" "agent" "user_input" "skill_exec" "tool_call" "llm_classify" "fan_out" ) ;
+        sh:description "MetaSkill 7 种 step kind 之一" ;
+    ] ;
+    sh:property [
+        sh:path meta:dependsOn ;
+        sh:description "dependsOn 引用同一 flow 内其他 step" ;
+    ] .
+
+# ─────────────────────────────────────────────────────────────
+# meta:RouteShape (GATEWAY 嵌套路由)
+# ─────────────────────────────────────────────────────────────
+meta:RouteShape
+    a sh:NodeShape ;
+    sh:targetClass meta:Route ;
+    sh:property [
+        sh:path meta:target ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "Route target 必存在" ;
+    ] ;
+    sh:property [
+        sh:path meta:choice ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:description "Route 必有一个 choice 标签" ;
+    ] .

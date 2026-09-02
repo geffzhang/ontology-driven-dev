@@ -1,0 +1,52 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix od: <https://ontology.ontology-driven.dev/v9#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ─────────────────────────────────────────────────────────────
+# od:ActorShape
+# ─────────────────────────────────────────────────────────────
+od:ActorShape
+    a sh:NodeShape ;
+    sh:targetClass od:Actor ;
+    sh:property [
+        sh:path od:id ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path od:hasRole ;
+        sh:description "Actor 应有至少一个 role（PoC 允许空）" ;
+    ] .
+
+# ─────────────────────────────────────────────────────────────
+# od:RoleShape
+# ─────────────────────────────────────────────────────────────
+od:RoleShape
+    a sh:NodeShape ;
+    sh:targetClass od:Role ;
+    sh:property [
+        sh:path od:id ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path od:hasPermission ;
+        sh:description "Role 应有 permissions" ;
+    ] .
+
+# ─────────────────────────────────────────────────────────────
+# od:PermissionShape
+# ─────────────────────────────────────────────────────────────
+od:PermissionShape
+    a sh:NodeShape ;
+    sh:targetClass od:Permission ;
+    sh:property [
+        sh:path od:id ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+    ] ;
+    sh:property [
+        sh:path od:targetType ;
+        sh:minCount 1 ;
+        sh:datatype xsd:string ;
+    ] .

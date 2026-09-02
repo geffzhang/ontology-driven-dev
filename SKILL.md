@@ -1,125 +1,493 @@
 ---
 name: ontology-driven-dev
-description: 当用户要基于业务需求，通过「需求探索 → 本体建模 → 应用构建」三步法开发一套完整、可运行的本体驱动 BS(浏览器前后端) 业务系统时使用。基于七模型本体 YAML(M1/M2/M3/M5/M6/M7/MU) 与内置 code-paas 技术底座，强制每个需求探索阶段人工确认，产出严格对齐需求文档、本体模型与代码的系统。支持整体触发与单阶段入口(仅建模/仅构建)。触发词含：本体驱动、需求探索、本体建模、七模型、code-paas、AI原生应用、业务系统开发。
+description: "Use this meta-skill when the user wants to turn a business requirement into a requirement specification and a seven-model ontology YAML set through the two-stage pipeline 'requirement exploration -> ontology modeling'. It runs a 12-step DAG with three hard human-confirmation gates in stage 1 and three model-generation layers plus one cross-reference validation pass in stage 2. Do not use it for ad-hoc Q&A, generic chat, single-stage tasks outside the two-stage pipeline, or non-ontology deliverables."
+kind: meta
+meta_priority: 70
+always: false
+final_text_mode: "step:validate_cross_refs"
+triggers: ["本体驱动", "需求探索", "本体建模", "七模型", "业务需求规格", "MetaSkill 驱动"]
+provenance: {"origin": "ontology-driven-dev", "license": "MIT"}
+composition:
+  steps:
+    - id: detect_entry
+      kind: llm_chat
+      output_contract:
+        format: json
+        required_properties: [entry, domain]
+      with:
+        system: |
+          You are the entry router for ontology-driven-dev. From the user request
+          alone, classify the entry mode (full / only_modeling / reconfirm_stage_<N>),
+          extract the business domain name (in Chinese), and conditionally extract
+          the absolute path to an existing requirement specification document.
+          Return only the JSON object below, with no extra prose, no Markdown
+          fences, and no commentary.
+        task: |
+          输出严格的 JSON 对象（不带任何额外文字）：
+          {
+            "entry": "full" | "only_modeling" | "reconfirm_stage_<N>",
+            "domain": "<业务域中文名，如：销售合同执行管理>",
+            "baseline_doc_path": "<需求规格说明书绝对路径，仅 entry='only_modeling' 时必填，否则置空字符串>"
+          }
+          判别规则：
+          - 用户给出业务需求描述（自然语言）→ entry="full"，baseline_doc_path=""
+          - 用户已提供需求规格说明书路径或内容 → entry="only_modeling"，baseline_doc_path 必填
+          - 用户说"重做阶段 N"或"修改阶段 N" → entry="reconfirm_stage_<N>"（N ∈ 0..6），baseline_doc_path=""
+          - entry 字段值必须严格匹配以上三种格式之一。
+
+          用户输入：{{ input | xml_escape | truncate(2048) }}
+      route:
+        - when: "outputs.detect_entry.entry == 'only_modeling'"
+          to: p2_objects_roles
+        - when: "outputs.detect_entry.entry | starts_with('reconfirm_stage_')"
+          to: p1_foundation_explore
+    - id: p1_foundation_explore
+      kind: agent
+      skill: req-explorer
+      with:
+        stage_range: "0-2"
+        domain: "{{ outputs.detect_entry.domain }}"
+        prior_confirms: ""
+      depends_on: [detect_entry]
+      retry:
+        max_attempts: 2
+        backoff_ms: 2000
+      output_contract:
+        format: json
+        required_properties: [stages, appendix_b_state]
+
+    - id: p1_foundation_confirm
+      kind: user_input
+      depends_on: [p1_foundation_explore]
+      retry:
+        max_attempts: 1
+        backoff_ms: 500
+      clarify:
+        mode: form
+        extract_natural_language: false
+        fields:
+          - name: bulk_decision
+            type: enum
+            options: [accept_all_ai, review_each_stage]
+            default: review_each_stage
+            required: true
+          - name: stage0_ai_suggestion
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage0_ai_reason
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage0_decision
+            type: enum
+            options: [accept, modify, skip]
+            default: accept
+            required: true
+          - name: stage0_modification
+            type: string
+            required: false
+            max_length: 1000
+          - name: stage1_ai_suggestion
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage1_ai_reason
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage1_decision
+            type: enum
+            options: [accept, modify, skip]
+            default: accept
+            required: true
+          - name: stage1_modification
+            type: string
+            required: false
+            max_length: 1000
+          - name: stage2_ai_suggestion
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage2_ai_reason
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage2_decision
+            type: enum
+            options: [accept, modify, skip]
+            default: accept
+            required: true
+          - name: stage2_modification
+            type: string
+            required: false
+            max_length: 1000
+          - name: cluster_modification
+            type: string
+            required: false
+            max_length: 1000
+        cancel_words: ["算了", "取消", "cancel", "stop", "abort"]
+        timeout_seconds: 1800
+        
+    - id: p1_flow_explore
+      kind: agent
+      skill: req-explorer
+      with:
+        stage_range: "3-4"
+        domain: "{{ outputs.detect_entry.domain }}"
+        prior_confirms: "{{ outputs.p1_foundation_confirm }}"
+      depends_on: [p1_foundation_confirm]
+      output_contract:
+        format: json
+        required_properties: [stages]
+
+    - id: p1_flow_confirm
+      kind: user_input
+      depends_on: [p1_flow_explore]
+      clarify:
+        mode: form
+        extract_natural_language: false
+        fields:
+          - name: bulk_decision
+            type: enum
+            options: [accept_all_ai, review_each_stage]
+            default: review_each_stage
+            required: true
+          - name: stage3_ai_suggestion
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage3_ai_reason
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage3_decision
+            type: enum
+            options: [accept, modify, skip]
+            default: accept
+            required: true
+          - name: stage3_modification
+            type: string
+            required: false
+            max_length: 1000
+          - name: stage4_ai_suggestion
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage4_ai_reason
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage4_decision
+            type: enum
+            options: [accept, modify, skip]
+            default: accept
+            required: true
+          - name: stage4_modification
+            type: string
+            required: false
+            max_length: 1000
+          - name: cluster_modification
+            type: string
+            required: false
+            max_length: 1000
+        cancel_words: ["算了", "取消", "cancel", "stop", "abort"]
+        timeout_seconds: 1800
+    - id: p1_tail_explore
+      kind: agent
+      skill: req-explorer
+      with:
+        stage_range: "5-6"
+        domain: "{{ outputs.detect_entry.domain }}"
+        prior_confirms: "{{ outputs.p1_flow_confirm }}"
+      depends_on: [p1_flow_confirm]
+      output_contract:
+        format: json
+        required_properties: [stages]
+
+    - id: p1_tail_confirm
+      kind: user_input
+      depends_on: [p1_tail_explore]
+      clarify:
+        mode: form
+        extract_natural_language: false
+        fields:
+          - name: bulk_decision
+            type: enum
+            options: [accept_all_ai, review_each_stage]
+            default: review_each_stage
+            required: true
+          - name: stage5_ai_suggestion
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage5_ai_reason
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage5_decision
+            type: enum
+            options: [accept, modify, skip]
+            default: accept
+            required: true
+          - name: stage5_modification
+            type: string
+            required: false
+            max_length: 1000
+          - name: stage6_ai_suggestion
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage6_ai_reason
+            type: string
+            required: true
+            max_length: 1000
+          - name: stage6_decision
+            type: enum
+            options: [accept, modify, skip]
+            default: accept
+            required: true
+          - name: stage6_modification
+            type: string
+            required: false
+            max_length: 1000
+          - name: cluster_modification
+            type: string
+            required: false
+            max_length: 1000
+        cancel_words: ["算了", "取消", "cancel", "stop", "abort"]
+        timeout_seconds: 1800
+
+    - id: write_requirement_doc
+      kind: tool_call
+      tool: write_file
+      tool_allowlist: [write_file]
+      depends_on: [p1_tail_confirm]
+      skip_if: "outputs.detect_entry.entry == 'only_modeling'"
+      retry:
+         max_attempts: 2
+         backoff_ms: 1000
+      tool_args:
+         path: "{{ inputs.workspace_dir }}/{{ outputs.detect_entry.domain }}-需求规格说明书-V9.md"
+         content: |
+          # {{ outputs.detect_entry.domain }} 需求规格说明书（V9.0）
+
+          > 生成方式：ontology-driven-dev MetaSkill（OpenClaw）
+          > 业务域：{{ outputs.detect_entry.domain }}
+          > 入口模式：{{ outputs.detect_entry.entry }}
+
+          ## 阶段零 总体理解确认
+
+          - 建议：{{ outputs.p1_foundation_confirm.stage0_ai_suggestion }}
+          - 理由：{{ outputs.p1_foundation_confirm.stage0_ai_reason }}
+          - 决定：{{ outputs.p1_foundation_confirm.stage0_decision }}
+          - 修改：{{ outputs.p1_foundation_confirm.stage0_modification | default("无") }}
+
+          ## 阶段一 业务对象
+
+          - 建议：{{ outputs.p1_foundation_confirm.stage1_ai_suggestion }}
+          - 理由：{{ outputs.p1_foundation_confirm.stage1_ai_reason }}
+          - 决定：{{ outputs.p1_foundation_confirm.stage1_decision }}
+          - 修改：{{ outputs.p1_foundation_confirm.stage1_modification | default("无") }}
+
+          ## 阶段二 业务功能与规则
+
+          - 建议：{{ outputs.p1_foundation_confirm.stage2_ai_suggestion }}
+          - 理由：{{ outputs.p1_foundation_confirm.stage2_ai_reason }}
+          - 决定：{{ outputs.p1_foundation_confirm.stage2_decision }}
+          - 修改：{{ outputs.p1_foundation_confirm.stage2_modification | default("无") }}
+
+          ## 阶段三 跨对象联动识别
+
+          - 建议：{{ outputs.p1_flow_confirm.stage3_ai_suggestion }}
+          - 理由：{{ outputs.p1_flow_confirm.stage3_ai_reason }}
+          - 决定：{{ outputs.p1_flow_confirm.stage3_decision }}
+          - 修改：{{ outputs.p1_flow_confirm.stage3_modification | default("无") }}
+
+          ## 阶段四 端到端协同流与审批流
+
+          - 建议：{{ outputs.p1_flow_confirm.stage4_ai_suggestion }}
+          - 理由：{{ outputs.p1_flow_confirm.stage4_ai_reason }}
+          - 决定：{{ outputs.p1_flow_confirm.stage4_decision }}
+          - 修改：{{ outputs.p1_flow_confirm.stage4_modification | default("无") }}
+
+          ## 阶段五 查询统计与固定报表
+
+          - 建议：{{ outputs.p1_tail_confirm.stage5_ai_suggestion }}
+          - 理由：{{ outputs.p1_tail_confirm.stage5_ai_reason }}
+          - 决定：{{ outputs.p1_tail_confirm.stage5_decision }}
+          - 修改：{{ outputs.p1_tail_confirm.stage5_modification | default("无") }}
+
+          ## 阶段六 角色权限
+
+          - 建议：{{ outputs.p1_tail_confirm.stage6_ai_suggestion }}
+          - 理由：{{ outputs.p1_tail_confirm.stage6_ai_reason }}
+          - 决定：{{ outputs.p1_tail_confirm.stage6_decision }}
+          - 修改：{{ outputs.p1_tail_confirm.stage6_modification | default("无") }}
+
+ 
+          ## 附录 B 确认状态
+
+          | 阶段 | 类别 | 决定 | 修改 |
+          |---|---|---|---|
+          | 阶段零 | - | {{ outputs.p1_foundation_confirm.stage0_decision }} | {{ outputs.p1_foundation_confirm.stage0_modification | default("-") }} |
+          | 阶段一 | - | {{ outputs.p1_foundation_confirm.stage1_decision }} | {{ outputs.p1_foundation_confirm.stage1_modification | default("-") }} |
+          | 阶段二 | - | {{ outputs.p1_foundation_confirm.stage2_decision }} | {{ outputs.p1_foundation_confirm.stage2_modification | default("-") }} |
+          | 阶段三 | - | {{ outputs.p1_flow_confirm.stage3_decision }} | {{ outputs.p1_flow_confirm.stage3_modification | default("-") }} |
+          | 阶段四 | - | {{ outputs.p1_flow_confirm.stage4_decision }} | {{ outputs.p1_flow_confirm.stage4_modification | default("-") }} |
+          | 阶段五 | - | {{ outputs.p1_tail_confirm.stage5_decision }} | {{ outputs.p1_tail_confirm.stage5_modification | default("-") }} |
+          | 阶段六 | - | {{ outputs.p1_tail_confirm.stage6_decision }} | {{ outputs.p1_tail_confirm.stage6_modification | default("-") }} |
+
+    - id: p2_objects_roles
+      kind: agent
+      skill: ontology-modeler
+      depends_on: [write_requirement_doc]
+      with:
+        models: ["M1", "M5"]
+        domain: "{{ outputs.detect_entry.domain }}"
+        baseline_doc: >-
+          {% if outputs.detect_entry.baseline_doc_path and outputs.detect_entry.baseline_doc_path != "" %}
+          {{ outputs.detect_entry.baseline_doc_path }}
+          {% else %}
+          {{ inputs.workspace_dir }}/{{ outputs.detect_entry.domain }}-需求规格说明书-V9.md
+          {% endif %}
+        prior_models: {}
+        write_manifest: false
+      retry:
+        max_attempts: 2
+        backoff_ms: 2000
+      output_contract:
+        format: json
+        required_properties: [model_files, generation_log]
+
+    - id: p2_behaviors_rules
+      kind: agent
+      skill: ontology-modeler
+      depends_on: [p2_objects_roles]
+      with:
+        models: ["M2", "M3", "M7"]
+        domain: "{{ outputs.detect_entry.domain }}"
+        baseline_doc: >-
+          {% if outputs.detect_entry.baseline_doc_path and outputs.detect_entry.baseline_doc_path != "" %}
+          {{ outputs.detect_entry.baseline_doc_path }}
+          {% else %}
+          {{ inputs.workspace_dir }}/{{ outputs.detect_entry.domain }}-需求规格说明书-V9.md
+          {% endif %}
+        prior_models:
+          M1: "{{ outputs.p2_objects_roles.model_files.M1 }}"
+          M5: "{{ outputs.p2_objects_roles.model_files.M5 }}"
+        write_manifest: false
+      retry:
+        max_attempts: 2
+        backoff_ms: 2000
+      output_contract:
+        format: json
+        required_properties: [model_files, generation_log]
+
+    - id: p2_flows_ui
+      kind: agent
+      skill: ontology-modeler
+      depends_on: [p2_behaviors_rules]
+      with:
+        models: ["M5-perm", "M6", "MU"]
+        domain: "{{ outputs.detect_entry.domain }}"
+        baseline_doc: >-
+          {% if outputs.detect_entry.baseline_doc_path and outputs.detect_entry.baseline_doc_path != "" %}
+          {{ outputs.detect_entry.baseline_doc_path }}
+          {% else %}
+          {{ inputs.workspace_dir }}/{{ outputs.detect_entry.domain }}-需求规格说明书-V9.md
+          {% endif %}
+        prior_models:
+          M1: "{{ outputs.p2_objects_roles.model_files.M1 }}"
+          M2: "{{ outputs.p2_behaviors_rules.model_files.M2 }}"
+          M3: "{{ outputs.p2_behaviors_rules.model_files.M3 }}"
+          M5-actor: "{{ outputs.p2_objects_roles.model_files.M5 }}"
+          M7: "{{ outputs.p2_behaviors_rules.model_files.M7 }}"
+        write_manifest: true
+      retry:
+        max_attempts: 2
+        backoff_ms: 2000
+      output_contract:
+        format: json
+        required_properties: [model_files, generation_log, manifest_path]
+
+    - id: validate_cross_refs
+      kind: skill_exec
+      skill: model-validator
+      entrypoint: scripts/validate_yaml_refs.py
+      skill_exec_parse_mode: json
+      skill_exec_args:
+        - "{{ inputs.workspace_dir }}/yaml"
+        - "{{ outputs.p2_flows_ui.manifest_path }}"
+      depends_on: [p2_flows_ui]
+      retry:
+        max_attempts: 2
+        backoff_ms: 1000
 ---
 
-# 本体驱动系统开发技能（Ontology-Driven Dev）
+# 本体驱动需求与建模技能（MetaSkill 版）
 
-将"业务需求 → 软件需求规格 → 七模型本体 YAML → 可运行 BS 系统"的完整方法论打包为可复用技能。
-技术底座为内置的 `code-paas`（Flask + SQLite + React/TS 单体应用，含系统管理、流程引擎、工作台、本体注册表），
-输出严格受四份规范约束。
+支持 MetaSkill 的运行时可用。提供强类型表单、跨会话 checkpoint、DAG 校验、审计追踪。
 
-> **路径约定（跨工具通用）**：本技能内所有相对路径（如 `references/`、`reference-example/`、`techbase/`）均以「**本 SKILL.md 所在文件夹**」为根目录。
-> - WorkBuddy / Claude Code / Codex 等工具在加载技能时会自动解析该根目录；
-> - 若某工具未自动解析，请将下文 `<本技能目录>` / `<技能根目录>` 占位符替换为本 SKILL.md 的**绝对路径**（例如 `C:\Users\hemin\.claude\skills\ontology-driven-dev` 或 `~/.workbuddy/skills/ontology-driven-dev`）后执行。
+> **路径约定**：
+> - 本文件位于项目根 `SKILL.md`（`kind: meta`）
+> - 子 Skill 由 OpenClaw SkillLoader 解析，需启用 `Skills.Load.ScanSubdirectories`：
+>   - `subskills/req-explorer/SKILL.md`（阶段一 7 阶段探索执行器）
+>   - `subskills/ontology-modeler/SKILL.md`（阶段二七模型生成执行器）
+>   - `subskills/model-validator/SKILL.md`（步骤 12 跨引用门禁，skill_exec entrypoint）
+> - 子 Skill 自带的规范与范例位于其各自的 `references/`、`reference-example/` 子目录
 
-## 一、适用场景与触发
+## 一、12 步骨架
 
-- 用户给出一段业务需求（一句话或一段描述），希望产出一套可运行业务系统。
-- 用户明确要求"需求探索确认 / 本体建模 / 七模型 / 基于 code-paas 构建 / AI 原生应用"。
-- 自然语言示例：「帮我开发一个 XX 管理系统」「把这段需求做成本体驱动开发」「基于这份需求规格说明书生成系统」。
+| # | Id | Kind | 作用 |
+|---|---|---|---|
+| 1 | `detect_entry` | `llm_chat` | 路由检测（full / only_modeling / reconfirm_stage_N）+ 业务域抽取 |
+| 2 | `p1_foundation_explore` | `agent → req-explorer` | 阶段 0-2 探索（总体 / 对象 / 功能与规则） |
+| 3 | `p1_foundation_confirm` | `user_input` | foundation 簇硬门禁（13 字段表单） |
+| 4 | `p1_flow_explore` | `agent → req-explorer` | 阶段 3-4 探索（联动 / 协同流） |
+| 5 | `p1_flow_confirm` | `user_input` | flow 簇硬门禁（9 字段表单） |
+| 6 | `p1_tail_explore` | `agent → req-explorer` | 阶段 5-6 探索（查询 / 权限） |
+| 7 | `p1_tail_confirm` | `user_input` | tail 簇硬门禁（9 字段表单） |
+| 8 | `write_requirement_doc` | `tool_call (write_file)` | 写入需求规格说明书到工作目录（`skip_if` 仅建模入口） |
+| 9 | `p2_objects_roles` | `agent → ontology-modeler` | M1 + M5(角色) |
+| 10 | `p2_behaviors_rules` | `agent → ontology-modeler` | M2 + M3 + M7 |
+| 11 | `p2_flows_ui` | `agent → ontology-modeler` | M5'(权限) + M6 + MU + manifest.json |
+| 12 | `validate_cross_refs` | `skill_exec (model-validator scripts/validate_yaml_refs.py)` | 6 条跨引用 + 3 条 JSON-LD 门禁一次性扫描 |
 
-## 二、三阶段管线 + 人工门禁（强顺序）
+## 二、关键设计决策
 
-阶段一与阶段二、阶段三之间强顺序；阶段一内部八阶段也强顺序，且每一阶段都必须**人工确认**后才可推进。
+| 决策点 | 选择 | 说明 |
+|---|---|---|
+| 业务域来源 | 由 `detect_entry` 一次性抽取 | 省一步 user_input 预算 |
+| `bulk_decision` 行为 | 表单字段始终展示，作为快捷覆盖 | MetaClarifySchema 无 field-level skip_if |
+| M5 拆分 | M5(角色) 在步骤 9，M5'(权限) 在步骤 11 | 保留阶段二语义清晰度 |
+| 失败兜底 | 全部步骤靠 `retry` 策略重试 | 受 12 步预算约束，不配置 on_failure 替代步骤 |
 
-### 阶段一：需求探索 → 软件需求规格说明书
+## 三、子 Skill 索引
 
-- **唯一依据**：`references/AI需求探索与确认提示词V9.0.md`（其附录一即《软件需求编写规范 V9.0》全文，是本阶段格式 / 编号 / 图表 / 自检的唯一基准）。
-- **严格按该提示词的"阶段零 ～ 阶段七"八阶段推进**：
-  - 阶段零 总体理解确认 → 阶段一 业务对象 → 阶段二 业务功能与规则 → 阶段三 跨对象联动识别 →
-    阶段四 端到端协同流与审批流 → 阶段五 查询统计与固定报表 → 阶段六 角色权限 → 阶段七 UI 原型（可选，须先确认是否需要）。
-- **人工确认门禁（强制，不可跳过）**：每个阶段(stage0-7)结束、进入下一阶段前，必须按提示词统一的"问题 N + AI建议 + 建议理由 + 其他选项 + 快捷回复"格式提问，并**硬性暂停等待用户明确确认**（"按AI建议" / 选项字母 / 修改意见）后才可推进。
-  - A 类（行业通用）内容：AI 自动补全，标注 `[AI自动补全]`。
-  - B 类（企业专属、猜错会有真实业务风险）内容：必须带 AI 建议提问，标注 `[待确认]` / `[已确认]`。
-  - 绝不在用户未确认时私自进入下一阶段；附录 B 存在 `[待确认]` 则文档不得标记"完整"。
-- **终态**：对照规范第十二章 47 项自检全通过、且附录 B 无 `[待确认]` 后，文档标记为「完整（可进入本体建模阶段）」。
-- **输出**：`<业务域>-需求规格说明书-V9.md`（置于当前工作项目根目录）。
-- **对照范例**：`reference-example/合同管理需求规格说明书-V9.md`（销售合同执行管理跑通实物）。
+| 子 Skill | 路径 | 自带资源 |
+|---|---|---|
+| `req-explorer` | `subskills/req-explorer/SKILL.md` | `references/AI需求探索与确认提示词V9.0.md`、`reference-example/合同管理需求规格说明书-V9.md` |
+| `ontology-modeler` | `subskills/ontology-modeler/SKILL.md` | `references/ontology_modeling_framework_v9.md`、`reference-example/`（7 个 YAML + manifest.json）、`scripts/`（转换与校验工具链） |
+| `model-validator` | `subskills/model-validator/SKILL.md` | `scripts/validate_yaml_refs.py`（6 条跨引用门禁 + 3 条 JSON-LD 门禁） |
 
-### 阶段二：本体建模 → 七模型 YAML
+## 四、失败兜底
 
-- **唯一依据**：`references/ontology_modeling_framework_v9.md`（七模型元文件规范 + 各模型 YAML 模板）。
-- **输入**：阶段一需求文档，尤其其**附录 C 七模型建模输入基线**（是后续 YAML 的确定性输入，不得再做大范围业务拆分）。
-- **产物**：M1 对象 / M2 行为 / M3 规则 / M5 主体 / M6 流程 / M7 查询报表 / MU UI 共七个 YAML + `manifest.json`，输出到当前项目的 `yaml/` 目录。
-- **建模顺序建议**（见指导书 §4 步骤 1）：M1 → M5 角色 → M3 规则 → M2 行为 → M7 查询 → M5 权限 → M6 流程 → MU 界面。
-- **一致性门禁（强制）**：建模后核对——
-  - 可追溯门禁：M2 `triggerType=USER_ACTION` 行为须被至少一个 MU 操作功能点引用；MU 引用行为须存在。
-  - M7 `behaviorRef` ↔ M2 `queryReportRef` 严格一对一。
-  - M6 的 `roleRef` / `behaviorRef` / `subFlowRef` / `ruleRef` 引用均须存在；`SUB_FLOW_CALL` 调用图无环。
-  - 每个正式查询报表与唯一 M2 QUERY 行为双向一对一；联动描述中规则条件与结论不混写。
-- **输出**：`yaml/m1-object-model.yaml` … `yaml/mu-ui-model.yaml` + `yaml/manifest.json`。
-- **对照范例**：`reference-example/` 下 7 个 yaml（字段语义、命名、syncTriggers / node_graph / ASCII 布局的直接参考）。
+若本技能在任何步骤失败，**逐字回报失败信息**给用户：
 
-### 阶段三：应用构建 → 可运行 BS 系统
+1. **明确失败的步骤**（如 `p1_foundation_explore`、`validate_cross_refs`）。
+2. **引用编排器的结构化错误信息**（如 `prior_model_missing: M1`、`framework_doc_not_found`、`ref_inconsistency: M6.behaviorRef=<x> vs M2.behaviorRef=<x>`）。
+3. **立即终止**。不得临场编造 YAML、跳步补写、或跳过 `validate_cross_refs` 继续。
 
-- **依据（严格按序参考）**：
-  1. `references/本体模型业务功能开发指导书.md`（核心：步骤 1-10、模型→实现映射总表、审批端到端、AI 对话、检查清单）
-  2. `references/AI原生应用技术架构设计文档.md`（技术栈 / 分层 / 语义注册表 / AI 编排 / SSE / 只读 SQL 安全边界）
-  3. `references/UI-UE界面设计规范.md`（配色 token / 9pt / 标签右对齐 / 三类界面布局 / 完整 CSS 库）
-- **技术底座**：本技能内置 `techbase/`（即 code-paas 干净源码，已剔除 node_modules / __pycache__ / dist / 运行时 DB）。
-  **第一步**：将 `techbase/` 整体复制为当前项目根目录下的 `code-app/`，随后安装依赖：
-  ```bash
-  # 复制底座（保留目录结构）
-  cp -r <本技能目录>/techbase/. <当前项目>/code-app/
-  # （<本技能目录> = 本 SKILL.md 所在文件夹；各工具会自动解析，否则请替换为绝对路径）
-  cd <当前项目>/code-app/frontend && npm install      # 还原前端依赖
-  cd <当前项目>/code-app/backend  && pip install -r requirements.txt
-  ```
-  > 底座是只读基线，扩展只在 `code-app/` 内进行；techbase 自带的"客户申请/查询"示例模型（models/ 下 m1/m2/m5/m6/mu）按指导书复制改造或删除，用阶段二 `yaml/` 七模型取而代之并登记 manifest.json。
-- **开发顺序（指导书 §1.4 标准流水线 10 步）**：
-  1. 写七模型 YAML 到 `code-app/models/` 并登记 `manifest.json`；
-  2. M1 → 数据库表 DDL（聚合根主表 / 子实体从表，含 5 默认字段；编号"三位前缀+四位流水号"自动生成）；
-  3. 数据字典由注册表自动注册；
-  4. M2 行为 + M3 规则 → `services/*.py`（事务内；前置校验→规则校验→状态变更→`syncTriggers` 联动；规则引擎 `simpleeval`，违反给中文提示）；
-  5. M5 → 系统管理种子（角色 / 权限 / 资源 / 用户；接口加 `@require_permission`）；
-  6. M6 → 流程引擎（M6 activities+branches 转 `node_graph`；审批角色须配置且有用户绑定）；
-  7. MU → 菜单 + 页面 + 路由（单表 2 列 / 主从 3 列+从表表格 / 查询 3 列+结果表格分页；`AggregateRootRef` 跳选框、`Enum`/`DictionaryRef` 下拉框；带审批功能"保存草稿/提交"双按钮）；
-  8. **强制实现右侧 AI 对话框**（指导书第 7 章 + 架构文档第 9 章）：底座默认 `ai.enabled=false` 且 backend 无 `ai/`、`sse/` 模块，本步必须补齐——system prompt 注入本体注册表、工具注册（导航/查询/行为/只读 SQL）、SSE 流式（`message_start→delta→tool_call→tool_result→render_payload→message_end`）、`text/table/chart/action` 渲染协议、动态 SQL 严格只读白名单 + 审计；
-  9. 联调：登录 → 录入 → 暂存/提交 → 多级审批（通过/驳回/退回/撤回）→ 查询，全链路跑通；
-  10. 验收：对照指导书附录 A 检查清单；规则违反前端有中文提示；界面符合 UI-UE 规范。
-- **输出**：`code-app/`（可运行系统）。默认账号见 `techbase/README.md`（admin/admin123 等）。
+不得做的事：
 
-## 三、单阶段入口（用户可指定只跑某段）
+- **不得**在未读到实际 YAML 文件的情况下宣称七模型已生成；如需验证，必须用 `read_file` 真读到 `yaml/m<1-7, u>-*-model.yaml`。
+- **不得**伪造文件路径、模型 ID、对象 ID、引用关系。
+- **不得**绕过门禁——例如跳过 `validate_cross_refs`、自动 `accept` 用户未确认的表单、或在 B 类字段强行 `skip`。
+- **不得**把 `cancel_words` 触发后的退出当成正常完成；视为人工取消，向用户回执"流程已中止，未写盘"。
 
-- **仅建模**：用户已提供需求规格说明书 → 直接从阶段二开始，产出 `yaml/` 七模型。
-- **仅构建**：用户已提供七模型 YAML → 直接从阶段三开始（复制 techbase → code-app 并实现）。
-- **重确认需求**：已产出需求文档但有修订 → 回到对应阶段补确认。
+若用户想重试：
 
-## 四、固定输出约定（技能级，仅「业务域」为参数）
-
-| 产物 | 路径 / 命名 |
-|---|---|
-| 需求文档 | `<业务域>-需求规格说明书-V9.md`（项目根） |
-| 本体模型 | `yaml/`（7 yaml + manifest.json） |
-| 业务系统 | `code-app/` |
-| 技术底座来源 | 技能内置 `techbase/`（运行时复制到 code-app） |
-
-> 若用户显式要求其他路径/命名，以用户指定为准；否则一律采用上表。
-
-## 五、关键纪律（不可违反）
-
-1. **人工确认不可替代**：阶段一每个阶段必须硬暂停等人确认；附录 B 有 `[待确认]` 则文档不得标记完整。
-2. **模型是唯一语义来源**：代码 / 表 / 接口 / 菜单 / 权限 / 流程 / 规则全部可回溯到某个本体模型元素，禁止"模型一套、代码一套"。
-3. **底座不动**：扩展只在 `code-app/` 内，techbase/code-paas 是只读基线，不就地改。
-4. **严格对齐四份规范**：开发全程遵守《本体模型业务功能开发指导书》《AI 原生应用技术架构设计文档》《UI-UE 界面设计规范》《ontology_modeling_framework_v9》的强制条款（5 默认字段、跳选框、双按钮、AI 只读、逻辑删除 `flag=0`、状态机）。
-5. **AI 对话强制**：阶段三必须实现右侧 AI 对话框（含只读安全边界）。
-6. **事务与联动边界**：一个行为只改一个聚合（聚合内主从同事务）；跨聚合靠 `syncTriggers` 或流程编排。
-
-## 六、参考资源索引
-
-- 方法论文档（5 份）：`references/`
-  - `AI需求探索与确认提示词V9.0.md`（含《软件需求编写规范 V9.0》全文）
-  - `ontology_modeling_framework_v9.md`
-  - `本体模型业务功能开发指导书.md`
-  - `AI 原生应用技术架构设计文档.md`
-  - `UI-UE界面设计规范.md`
-- 黄金范例（仅文档 + yaml）：`reference-example/`（销售合同执行管理跑通实物，对照参考）
-- 技术底座（code-paas 干净源码 + requirements.txt + README）：`techbase/`
-
-## 七、运行说明（给用户）
-
-- 后端：`cd code-app/backend && pip install -r requirements.txt && python app.py`（默认 http://localhost:5000，首次启动自动建库+种子）
-- 前端开发：`cd code-app/frontend && npm install && npm run dev`（http://localhost:5173）
-- 前端生产：`npm run build` 后由 Flask 统一托管，访问 http://localhost:5000
-- 默认账号：admin/admin123（管理员，全部权限）；详见 `techbase/README.md`
+- `agent` kind 步骤的瞬时失败（子 Agent 解析/网络）靠本步骤的 `retry` 策略自动恢复。
+- 子 Skill 抛出的结构性错误（缺基线、缺上游模型、引用断裂）需用户先解决底层问题，再重发原请求。
+- 用户明确说"重做阶段 N"时，由 `detect_entry` 路由到 `entry="reconfirm_stage_<N>"`，从该阶段所在簇重启，不要从阶段 0 全量重跑。

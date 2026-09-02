@@ -1,0 +1,51 @@
+name: drift-check
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # 每周一 09:00 UTC（spec § 八 第 3 条）
+  workflow_dispatch:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.14' }
+      - run: pip install pyyaml rdflib pyshacl
+      - run: |
+          python subskills/ontology-modeler/scripts/validate.py \
+              subskills/ontology-modeler/reference-example/
+          python subskills/ontology-modeler/scripts/drift_check.py \
+              subskills/ontology-modeler/reference-example/
+          python subskills/ontology-modeler/scripts/sparql_queries.py --all > /dev/null
+          python subskills/model-validator/scripts/validate_yaml_refs.py \
+              subskills/ontology-modeler/reference-example/ \
+              subskills/ontology-modeler/reference-example/manifest.json
+      - run: |
+          # 并图确定性 smoke：重跑 merge_rdf.py，与已提交的 golden 逐字节比对
+          tmp=$(mktemp -d)
+          python subskills/ontology-modeler/scripts/merge_rdf.py \
+              subskills/ontology-modeler/reference-example/ \
+              --out "$tmp/ontology-merged.ttl" --format json
+          diff "$tmp/ontology-merged.ttl" \
+              subskills/ontology-modeler/reference-example/ontology-merged.ttl \
+              && echo "[OK] ontology-merged.ttl deterministic"
+      - run: |
+          for f in m1 m5 m6 m7; do
+            case $f in
+              m6) shape=m6_flow_shape ;;
+              m7) shape=m7_report_shape ;;
+              *) shape=${f}_*_shape ;;
+            esac
+            data=subskills/ontology-modeler/reference-example/$f-*model.jsonld
+            # shellcheck disable=SC2086
+            [ -f $data ] || continue
+            shape_path=$(ls subskills/ontology-modeler/scripts/shacl/${shape}.ttl 2>/dev/null | head -1 || true)
+            if [ -z "$shape_path" ]; then
+              echo "[skip] $f: SHACL shape ${shape}.ttl not yet authored (forward-compat placeholder)"
+              continue
+            fi
+            python subskills/ontology-modeler/scripts/shacl/run_shacl.py \
+                $data \
+                "$shape_path"
+          done

@@ -1,0 +1,188 @@
+{
+  "@context": {
+    "@vocab": "https://ontology.ontology-driven.dev/v9#",
+    "od": "https://ontology.ontology-driven.dev/v9#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "label": "rdfs:label",
+    "type": "@type",
+    "id": "@id",
+    "od:sourceAggregate": {
+      "@type": "@id"
+    },
+    "od:targetAggregate": {
+      "@type": "@id"
+    },
+    "od:hasRole": {
+      "@type": "@id"
+    },
+    "od:hasPermission": {
+      "@type": "@id"
+    },
+    "od:objectRef": {
+      "@type": "@id"
+    },
+    "od:boundBehavior": {
+      "@type": "@id"
+    }
+  },
+  "@graph": [
+    {
+      "@id": "urn:od:contract-mgmt:M7:REP-CONTRACT-LIST",
+      "@type": "od:Report",
+      "od:id": "REP-CONTRACT-LIST",
+      "od:name": "合同综合查询",
+      "od:alias": "contractList",
+      "od:objectType": "LIST_QUERY",
+      "od:description": "按多种业务条件模糊查找合同并进入合同详情",
+      "od:boundBehavior": "urn:od:contract-mgmt:M2:Contract_QueryList",
+      "od:sourceObject": [
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+          "od:alias": "contract",
+          "od:primary": true
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-PRODUCT-001",
+          "od:alias": "product",
+          "od:primary": false
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-CUSTOMER-001",
+          "od:alias": "customer",
+          "od:primary": false
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-DEPARTMENT-001",
+          "od:alias": "department",
+          "od:primary": false
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-EMPLOYEE-001",
+          "od:alias": "employee",
+          "od:primary": false
+        }
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M7:REP-CONTRACT-DETAIL",
+      "@type": "od:Report",
+      "od:id": "REP-CONTRACT-DETAIL",
+      "od:name": "合同详情查询",
+      "od:alias": "contractDetail",
+      "od:objectType": "DETAIL_QUERY",
+      "od:description": "查看单个合同的完整执行信息和可追溯历史",
+      "od:boundBehavior": "urn:od:contract-mgmt:M2:Contract_QueryDetail",
+      "od:sourceObject": [
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+          "od:alias": "contract",
+          "od:primary": true
+        }
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M7:REP-CONTRACT-EXECUTION",
+      "@type": "od:Report",
+      "od:id": "REP-CONTRACT-EXECUTION",
+      "od:name": "合同执行情况分析",
+      "od:alias": "contractExecutionAnalysis",
+      "od:objectType": "STATISTICAL_QUERY",
+      "od:description": "按合同汇总收款进度，识别合同执行与回款情况",
+      "od:boundBehavior": "urn:od:contract-mgmt:M2:Contract_QueryExecutionAnalysis",
+      "od:sourceObject": [
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+          "od:alias": "contract",
+          "od:primary": true
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-INVOICE-001",
+          "od:alias": "invoiceAgg",
+          "od:primary": false
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-RECEIPT-001",
+          "od:alias": "receiptAgg",
+          "od:primary": false
+        }
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M7:REP-DEPT-CONTRACT-SUMMARY",
+      "@type": "od:Report",
+      "od:id": "REP-DEPT-CONTRACT-SUMMARY",
+      "od:name": "部门合同统计分析报表",
+      "od:alias": "departmentContractSummary",
+      "od:objectType": "REPORT",
+      "od:description": "按部门汇总合同规模、开票和回款执行情况",
+      "od:boundBehavior": "urn:od:contract-mgmt:M2:Contract_QueryDepartmentSummary",
+      "od:sourceObject": [
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+          "od:alias": "contract",
+          "od:primary": true
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-DEPARTMENT-001",
+          "od:alias": "department",
+          "od:primary": false
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-INVOICE-001",
+          "od:alias": "invoiceAgg",
+          "od:primary": false
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-RECEIPT-001",
+          "od:alias": "receiptAgg",
+          "od:primary": false
+        }
+      ]
+    },
+    {
+      "@id": "urn:od:contract-mgmt:M7:REP-INVOICED-UNRECEIVED",
+      "@type": "od:Report",
+      "od:id": "REP-INVOICED-UNRECEIVED",
+      "od:name": "已开票未收款合同分析",
+      "od:alias": "invoicedUnreceivedContracts",
+      "od:objectType": "STATISTICAL_QUERY",
+      "od:description": "识别已批准开票但尚未全部收款的合同和开票记录（欠款清单）",
+      "od:boundBehavior": "urn:od:contract-mgmt:M2:Contract_QueryInvoicedUnreceived",
+      "od:sourceObject": [
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-INVOICE-001",
+          "od:alias": "invoice",
+          "od:primary": true
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-CONTRACT-001",
+          "od:alias": "contract",
+          "od:primary": false
+        },
+        {
+          "@type": "od:SourceObject",
+          "od:objectRef": "urn:od:contract-mgmt:M1:AGG-RECEIPT-001",
+          "od:alias": "receiptAgg",
+          "od:primary": false
+        }
+      ]
+    }
+  ]
+}
